@@ -6,6 +6,12 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    if "SECRET_KEY" not in os.environ and os.path.exists("/tmp/.container_secret_key"):
+        try:
+            with open("/tmp/.container_secret_key") as f:
+                os.environ["SECRET_KEY"] = f.read().strip()
+        except OSError:
+            pass
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     try:
         from django.core.management import execute_from_command_line
