@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join {{ team.name }} — DOGFOOD 2026</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+</head>
+<body class="bg-light py-5">
+    <div class="container" style="max-width: 600px;">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 text-center">
+                <h3 class="card-title mb-2">Team Invitation</h3>
+                <p class="text-muted mb-4">You have been invited to join a hackathon team.</p>
+
+                <div class="card bg-white border mb-4 text-start">
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Team:</strong> <span id="team-name">{{ team.name }}</span></p>
+                        <p class="mb-0"><strong>Event:</strong> <span id="event-name">{{ event.name }}</span></p>
+                    </div>
+                </div>
+
+                {% if is_member %}
+                <div class="alert alert-info mb-3" role="alert">
+                    You are already a member of this team.
+                </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'teams:join' team.invite_code %}">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="btn-join-team">Join this team</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
