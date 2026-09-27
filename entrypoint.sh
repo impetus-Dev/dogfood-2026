@@ -16,6 +16,9 @@ python manage.py migrate --noinput
 echo "Seeding fixtures..."
 python manage.py seed_fixtures
 
+echo "Creating checker sessions..."
+python manage.py create_checker_sessions
+
 if [ "$#" -eq 0 ] || [ "$1" = "./entrypoint.sh" ] || [ "$1" = "/app/entrypoint.sh" ]; then
     echo "Starting Django server on 0.0.0.0:8080..."
     exec python manage.py runserver 0.0.0.0:8080
