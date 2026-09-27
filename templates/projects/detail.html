@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.title }} — Project Detail — DOGFOOD 2026</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+</head>
+<body class="bg-light py-5">
+    <div class="container" style="max-width: 750px;">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="card-title mb-0" id="project-title">{{ project.title }}</h2>
+                    {% if project.status == 'submitted' %}
+                    <span class="badge bg-success" id="project-status">Submitted</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark" id="project-status">Draft</span>
+                    {% endif %}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Team</small>
+                        <strong id="project-team">{{ team.name }}</strong>
+                    </div>
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Track</small>
+                        <strong id="project-track">{{ track.name }}</strong>
+                    </div>
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Event</small>
+                        <strong id="project-event">{{ event.name }}</strong>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="mb-4">
+                    <h5>Summary</h5>
+                    <p class="card-text" id="project-summary" style="white-space: pre-wrap;">{{ project.summary }}</p>
+                </div>
+
+                <div class="mb-4">
+                    <h5>Repository</h5>
+                    <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" id="project-repo">{{ project.repo_url }}</a>
+                </div>
+
+                {% if project.status == 'submitted' %}
+                <div class="alert alert-success" role="alert">
+                    Submitted on: <strong id="project-submitted-at">{{ project.submitted_at|date:"Y-m-d H:i:s" }} UTC</strong>
+                </div>
+                {% elif is_deadline_passed %}
+                <div class="alert alert-danger" role="alert">
+                    The submission deadline ({{ event.submissions_close|date:"Y-m-d H:i:s" }} UTC) has passed. This project can no longer be submitted.
+                </div>
+                {% endif %}
+
+                {% if is_member and project.status == 'draft' %}
+                <div class="d-flex gap-2 mt-4">
+                    {% if can_edit %}
+                    <a href="{% url 'projects:edit' project.id %}" class="btn btn-secondary" id="btn-edit-project">Edit Draft</a>
+                    {% endif %}
+
+                    {% if can_submit %}
+                    <form method="post" action="{% url 'projects:submit' project.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary" id="btn-submit-project">Submit Project</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
