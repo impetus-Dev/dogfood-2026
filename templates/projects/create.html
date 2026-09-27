@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project Draft — DOGFOOD 2026</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+</head>
+<body class="bg-light py-5">
+    <div class="container" style="max-width: 650px;">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="card-title mb-4">Create Project Draft</h2>
+
+                {% if form.errors %}
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                            <li><strong>{{ field }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'projects:create' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_team" class="form-label">Team</label>
+                        <select class="form-select" id="id_team" name="team" required>
+                            <option value="" disabled selected>-- Select Your Team --</option>
+                            {% for team in form.fields.team.queryset %}
+                            <option value="{{ team.id }}" {% if form.team.value|stringformat:"s" == team.id|stringformat:"s" %}selected{% endif %}>
+                                {{ team.name }} ({{ team.event.name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_track" class="form-label">Track</label>
+                        <select class="form-select" id="id_track" name="track" required>
+                            <option value="" disabled selected>-- Select a Track --</option>
+                            {% for track in form.fields.track.queryset %}
+                            <option value="{{ track.id }}" {% if form.track.value|stringformat:"s" == track.id|stringformat:"s" %}selected{% endif %}>
+                                {{ track.name }} ({{ track.event.name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_title" class="form-label">Project Title</label>
+                        <input type="text" class="form-control" id="id_title" name="title" value="{{ form.title.value|default:'' }}" placeholder="Project title" required maxlength="255">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_summary" class="form-label">Summary</label>
+                        <textarea class="form-control" id="id_summary" name="summary" rows="4" placeholder="Brief project summary" required>{{ form.summary.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_repo_url" class="form-label">Repository URL</label>
+                        <input type="url" class="form-control" id="id_repo_url" name="repo_url" value="{{ form.repo_url.value|default:'' }}" placeholder="https://github.com/..." required>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="btn-create-project">Save Draft</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
