@@ -3,6 +3,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.http import (
     HttpResponseBadRequest,
     HttpResponseForbidden,
@@ -14,10 +15,51 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from events.models import Track
+from events.models import Event, Track
 from teams.models import Team, TeamMembership
 from .forms import ProjectForm, ProjectEditForm
 from .models import Project
+
+
+def project_gallery(request):
+    """
+    Public project gallery view.
+    Does NOT require authentication (accessible to anonymous users).
+    Supports server-side search via ?q= and safe track filtering via ?track=.
+    """
+    q = request.GET.get("q", "").strip()
+    track_param = request.GET.get("track", "").strip()
+
+    projects = (
+        Project.objects.select_related("team", "track", "team__event")
+        .all()
+        .order_by("-id")
+    )
+
+    if q:
+        projects = projects.filter(Q(title__icontains=q) | Q(summary__icontains=q))
+
+    selected_track_id = None
+    if track_param:
+        try:
+            selected_track_id = int(track_param)
+            projects = projects.filter(track_id=selected_track_id)
+        except (ValueError, TypeError):
+            # Mandatory safe-parsing: non-numeric or malformed track parameter is safely ignored
+            selected_track_id = None
+
+    tracks = Track.objects.select_related("event").all().order_by("name")
+
+    return render(
+        request,
+        "projects/gallery.html",
+        {
+            "projects": projects,
+            "tracks": tracks,
+            "q": q,
+            "selected_track_id": selected_track_id,
+        },
+    )
 
 
 def _extract_request_data(request):
@@ -76,6 +118,12 @@ def project_create(request):
         data = _extract_request_data(request)
         if data is None:
             return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+        # Server-side deadline enforcement
+        if Event.objects.exists() and all(timezone.now() >= e.submissions_close for e in Event.objects.all()):
+            if _is_json_request(request):
+                return JsonResponse({"error": "Submission deadline has passed."}, status=400)
+            return HttpResponseBadRequest("Submission deadline has passed.")
 
         form = ProjectForm(data, user=request.user)
         if not form.is_valid():

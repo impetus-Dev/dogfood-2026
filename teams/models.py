@@ -7,6 +7,7 @@ class Team(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="teams")
     name = models.CharField(max_length=255)
     invite_code = models.CharField(max_length=64, unique=True)
+    external_id = models.CharField(max_length=64, blank=True, null=True, unique=True)
 
     def __str__(self):
         return self.name
