@@ -13,6 +13,7 @@ class Project(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="projects")
     track = models.ForeignKey(Track, on_delete=models.CASCADE, related_name="projects")
     title = models.CharField(max_length=255)
+    external_id = models.CharField(max_length=64, blank=True, null=True, unique=True)
     summary = models.TextField()
     repo_url = models.URLField()
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="draft")

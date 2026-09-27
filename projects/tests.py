@@ -407,3 +407,136 @@ class ProjectEditAndSubmitTest(TestCase):
         self.project_closed.refresh_from_db()
         self.assertEqual(self.project_closed.status, "draft")
         self.assertIsNone(self.project_closed.submitted_at)
+
+
+class ProjectGalleryTest(TestCase):
+    """Tests for the public project gallery, search, and filtering."""
+
+    def setUp(self):
+        self.client = Client()
+        self.event = Event.objects.create(
+            name="Gallery Event",
+            submissions_close=timezone.now() + timedelta(days=10),
+        )
+        self.track_ai = Track.objects.create(event=self.event, name="AI / ML")
+        self.track_web = Track.objects.create(event=self.event, name="Web Dev")
+
+        self.user = User.objects.create_user(username="gallery_user", password="password123")
+        self.team1 = Team.objects.create(event=self.event, name="Alpha Builders", invite_code="INVITE_ALPHA")
+        self.team2 = Team.objects.create(event=self.event, name="Beta Creators", invite_code="INVITE_BETA")
+        TeamMembership.objects.create(team=self.team1, user=self.user)
+
+        self.project1 = Project.objects.create(
+            team=self.team1,
+            track=self.track_ai,
+            title="Neural Net Navigator",
+            summary="A revolutionary AI mapping tool",
+            repo_url="https://github.com/alpha/neural",
+            status="submitted",
+            submitted_at=timezone.now(),
+        )
+
+        self.project2 = Project.objects.create(
+            team=self.team2,
+            track=self.track_web,
+            title="Web3 Portal",
+            summary="Decentralized frontend app",
+            repo_url="https://github.com/beta/portal",
+            status="draft",
+        )
+
+    def test_anonymous_get_gallery_returns_200(self):
+        """Anonymous user can browse the gallery (both /projects and /projects/)."""
+        response_noslash = self.client.get("/projects")
+        self.assertEqual(response_noslash.status_code, 200)
+
+        response = self.client.get(reverse("projects:gallery"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_authenticated_get_gallery_returns_200(self):
+        """Authenticated user can browse the gallery."""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("projects:gallery"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_gallery_content_displays_project_fields(self):
+        """Gallery renders project title, summary, team, and track."""
+        response = self.client.get(reverse("projects:gallery"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Neural Net Navigator")
+        self.assertContains(response, "A revolutionary AI mapping tool")
+        self.assertContains(response, "Alpha Builders")
+        self.assertContains(response, "AI / ML")
+        self.assertContains(response, "https://github.com/alpha/neural")
+
+    def test_search_by_title(self):
+        """Search matches project title case-insensitively."""
+        response = self.client.get(reverse("projects:gallery"), {"q": "neural"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Neural Net Navigator")
+        self.assertNotContains(response, "Web3 Portal")
+
+    def test_search_by_summary(self):
+        """Search matches project summary."""
+        response = self.client.get(reverse("projects:gallery"), {"q": "Decentralized"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Web3 Portal")
+        self.assertNotContains(response, "Neural Net Navigator")
+
+    def test_search_no_match_returns_empty_state(self):
+        """Search with non-matching query returns 200 with empty state message."""
+        response = self.client.get(reverse("projects:gallery"), {"q": "NonExistentKeywordXYZ"})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Neural Net Navigator")
+        self.assertNotContains(response, "Web3 Portal")
+        self.assertContains(response, "No projects found matching your criteria.")
+
+    def test_filter_by_valid_track(self):
+        """Filtering by track returns only projects in that track."""
+        response = self.client.get(reverse("projects:gallery"), {"track": self.track_ai.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Neural Net Navigator")
+        self.assertNotContains(response, "Web3 Portal")
+
+    def test_combined_search_and_track_filter(self):
+        """Combined search and track filter narrows results correctly."""
+        response = self.client.get(
+            reverse("projects:gallery"),
+            {"q": "Neural", "track": self.track_ai.id},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Neural Net Navigator")
+
+        response_mismatch = self.client.get(
+            reverse("projects:gallery"),
+            {"q": "Neural", "track": self.track_web.id},
+        )
+        self.assertEqual(response_mismatch.status_code, 200)
+        self.assertNotContains(response_mismatch, "Neural Net Navigator")
+
+    def test_filter_non_numeric_track_safe_parsing(self):
+        """Non-numeric track query parameter returns 200, not 500 (mandatory safe parsing)."""
+        response = self.client.get(reverse("projects:gallery"), {"track": "not-a-number"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Neural Net Navigator")
+        self.assertContains(response, "Web3 Portal")
+
+    def test_html_escaping_robustness(self):
+        """Project with HTML-special characters in title is safely escaped and matchable."""
+        Project.objects.create(
+            team=self.team1,
+            track=self.track_ai,
+            title="R&D Tool",
+            summary="Research & Development testing tool",
+            repo_url="https://github.com/test/rd",
+            status="draft",
+        )
+        response = self.client.get(reverse("projects:gallery"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "R&amp;D Tool")
+
+    def test_t1_acceptance_anonymous_gallery_with_project_title(self):
+        """Official T1 acceptance pattern: Anonymous GET /projects returns 200 containing project title."""
+        response = self.client.get("/projects")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Neural Net Navigator")
