@@ -49,23 +49,48 @@ def cast_authenticated_vote(user, event, project):
     Raises DuplicateVoteError if the user already voted for this project.
     May raise ValidationError (from full_clean) or IntegrityError (race).
     """
+    from audit.services import log_audit
+
     # Close check — before any DB write
     if is_voting_closed(event):
         raise VotingClosedError("Voting is closed.")
 
     # Pre-check for a friendly error message
     if Vote.objects.filter(project=project, voter=user).exists():
+        log_audit(
+            actor=f"user:{user.pk}",
+            action="VOTE_DUPLICATE_BLOCKED",
+            target=f"project:{project.pk}",
+            metadata={
+                "mode": "authenticated",
+                "event_id": event.pk,
+                "project_id": project.pk,
+                "reason": "duplicate_user_vote",
+            },
+        )
         raise DuplicateVoteError(
             "You have already voted for this project."
         )
 
-    vote = Vote(
-        event=event,
-        project=project,
-        voter=user,
-        voting_token=None,
-    )
-    vote.save()
+    with transaction.atomic():
+        vote = Vote(
+            event=event,
+            project=project,
+            voter=user,
+            voting_token=None,
+        )
+        vote.save()
+        log_audit(
+            actor=f"user:{user.pk}",
+            action="VOTE_CAST",
+            target=f"vote:{vote.pk}",
+            metadata={
+                "mode": "authenticated",
+                "event_id": event.pk,
+                "project_id": project.pk,
+                "vote_id": vote.pk,
+            },
+        )
     return vote
 
 
@@ -81,12 +106,25 @@ def cast_link_vote(token_obj, event, project):
     Raises TokenAlreadyUsedError if the token was already used.
     Raises DuplicateVoteError on constraint violation.
     """
+    from audit.services import log_audit
+
     # Close check — before any DB write or token consumption
     if is_voting_closed(event):
         raise VotingClosedError("Voting is closed.")
 
     # Pre-check outside transaction for friendly error
     if token_obj.used_at is not None or Vote.objects.filter(voting_token=token_obj).exists():
+        log_audit(
+            actor="link",
+            action="VOTE_DUPLICATE_BLOCKED",
+            target=f"event:{event.pk}",
+            metadata={
+                "mode": "link",
+                "event_id": event.pk,
+                "project_id": project.pk,
+                "reason": "token_already_used",
+            },
+        )
         raise TokenAlreadyUsedError(
             "This voting token has already been used."
         )
@@ -97,6 +135,17 @@ def cast_link_vote(token_obj, event, project):
 
         # Re-check under lock
         if locked_token.used_at is not None or Vote.objects.filter(voting_token=locked_token).exists():
+            log_audit(
+                actor="link",
+                action="VOTE_DUPLICATE_BLOCKED",
+                target=f"event:{event.pk}",
+                metadata={
+                    "mode": "link",
+                    "event_id": event.pk,
+                    "project_id": project.pk,
+                    "reason": "token_already_used",
+                },
+            )
             raise TokenAlreadyUsedError(
                 "This voting token has already been used."
             )
@@ -111,6 +160,18 @@ def cast_link_vote(token_obj, event, project):
 
         locked_token.used_at = timezone.now()
         locked_token.save(update_fields=["used_at"])
+
+        log_audit(
+            actor="link",
+            action="VOTE_CAST",
+            target=f"vote:{vote.pk}",
+            metadata={
+                "mode": "link",
+                "event_id": event.pk,
+                "project_id": project.pk,
+                "vote_id": vote.pk,
+            },
+        )
 
     return vote
 

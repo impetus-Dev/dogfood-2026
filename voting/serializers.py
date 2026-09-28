@@ -29,3 +29,27 @@ class BallotResponseSerializer(serializers.Serializer):
     """Shapes the 200 response for GET /api/vote/ballot/<event_id>/"""
     event = serializers.IntegerField()
     projects = BallotProjectSerializer(many=True)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """Serializer for project comments."""
+    author_name = serializers.CharField(max_length=255, trim_whitespace=True)
+    text = serializers.CharField(max_length=5000, trim_whitespace=True)
+
+    class Meta:
+        from voting.models import Comment
+        model = Comment
+        fields = ["id", "project", "author_name", "text", "created_at"]
+        read_only_fields = ["id", "project", "created_at"]
+
+    def validate_author_name(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError("author_name cannot be blank.")
+        return val
+
+    def validate_text(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError("text cannot be blank.")
+        return val
