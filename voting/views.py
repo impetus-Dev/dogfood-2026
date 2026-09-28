@@ -16,12 +16,23 @@ from events.models import Event
 from projects.models import Project
 from voting.models import Vote, VotingToken
 from voting.serializers import VoteInputSerializer
+from voting.throttles import (
+    AuthenticatedUserThrottle,
+    AuthUserThrottle,
+    LinkIpThrottle,
+    LinkIPThrottle,
+    LinkTokenThrottle,
+)
 from voting.services import (
     DuplicateVoteError,
     TokenAlreadyUsedError,
+    VotingClosedError,
     cast_authenticated_vote,
     cast_link_vote,
+    get_results,
+    is_voting_closed,
     ordered_ballot,
+    tally_results,
 )
 
 
@@ -33,6 +44,8 @@ class AuthenticatedVoteView(APIView):
     """
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AuthenticatedUserThrottle]
+
 
     def post(self, request):
         serializer = VoteInputSerializer(data=request.data)
@@ -84,6 +97,11 @@ class AuthenticatedVoteView(APIView):
         # Cast the vote
         try:
             vote = cast_authenticated_vote(request.user, event, project)
+        except VotingClosedError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         except DuplicateVoteError as e:
             return Response(
                 {"detail": str(e)},
@@ -119,6 +137,7 @@ class LinkVoteView(APIView):
     """
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = [LinkTokenThrottle, LinkIpThrottle]
 
     def post(self, request, token):
         serializer = VoteInputSerializer(data=request.data)
@@ -186,6 +205,11 @@ class LinkVoteView(APIView):
         # Cast the vote — try/except OUTSIDE atomic() per Step 3A
         try:
             vote = cast_link_vote(token_obj, event, project)
+        except VotingClosedError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         except TokenAlreadyUsedError as e:
             return Response(
                 {"detail": str(e)},
@@ -297,6 +321,44 @@ class BallotView(APIView):
             {
                 "event": event.pk,
                 "projects": project_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ResultsView(APIView):
+    """
+    GET /api/results/<event_id>/
+
+    Public, read-only. Returns vote counts per submitted project.
+    Results are hidden until voting closes.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, event_id):
+        # Look up event
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:
+            return Response(
+                {"detail": "Event not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Delegate business logic to get_results in voting.services
+        try:
+            projects = get_results(event)
+        except VotingClosedError:
+            return Response(
+                {"detail": "Results are hidden until voting closes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return Response(
+            {
+                "event": event.pk,
+                "projects": projects,
             },
             status=status.HTTP_200_OK,
         )

@@ -137,4 +137,36 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    # Do NOT trust X-Forwarded-For by default. Rate limiting uses
+    # REMOTE_ADDR only. Override get_ident in throttle classes.
+    'NUM_PROXIES': 0,
+}
+
+import sys
+
+# Cache configuration.
+# RUNNING SERVER: LocMemCache
+# NORMAL manage.py test: DummyCache by default so that existing 118 Phase 2
+# tests are not contaminated by persistent throttle state.
+# Rate-limit-specific tests opt in via @override_settings(CACHES=...) with a real
+# LocMemCache and clear it in setUp.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    },
+    'throttle': {
+        'BACKEND': (
+            'django.core.cache.backends.dummy.DummyCache'
+            if 'test' in sys.argv
+            else 'django.core.cache.backends.locmem.LocMemCache'
+        ),
+    },
+}
+
+# These are chosen defaults for the rehearsal and are NOT numeric limits
+# mandated by the supplied project specification.
+VOTE_RATE_LIMITS = {
+    'auth_user': '20/min',
+    'link_token': '10/min',
+    'link_ip': '120/min',
 }
