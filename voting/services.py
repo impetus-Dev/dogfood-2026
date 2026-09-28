@@ -23,6 +23,24 @@ class TokenAlreadyUsedError(Exception):
     pass
 
 
+class VotingClosedError(Exception):
+    """Raised when voting has closed for the event."""
+    pass
+
+
+def is_voting_closed(event):
+    """
+    Return True if voting is closed for the event.
+
+    Closed means: voting_close is not NULL AND timezone.now() >= voting_close.
+    Exactly at voting_close counts as closed.
+    voting_close NULL means no close time is set: voting stays OPEN.
+    """
+    if event.voting_close is None:
+        return False
+    return timezone.now() >= event.voting_close
+
+
 def cast_authenticated_vote(user, event, project):
     """
     Cast a vote as an authenticated user.
@@ -31,6 +49,10 @@ def cast_authenticated_vote(user, event, project):
     Raises DuplicateVoteError if the user already voted for this project.
     May raise ValidationError (from full_clean) or IntegrityError (race).
     """
+    # Close check — before any DB write
+    if is_voting_closed(event):
+        raise VotingClosedError("Voting is closed.")
+
     # Pre-check for a friendly error message
     if Vote.objects.filter(project=project, voter=user).exists():
         raise DuplicateVoteError(
@@ -59,6 +81,10 @@ def cast_link_vote(token_obj, event, project):
     Raises TokenAlreadyUsedError if the token was already used.
     Raises DuplicateVoteError on constraint violation.
     """
+    # Close check — before any DB write or token consumption
+    if is_voting_closed(event):
+        raise VotingClosedError("Voting is closed.")
+
     # Pre-check outside transaction for friendly error
     if token_obj.used_at is not None or Vote.objects.filter(voting_token=token_obj).exists():
         raise TokenAlreadyUsedError(
@@ -131,3 +157,45 @@ def ordered_ballot(event, mode, identity_id):
     rng.shuffle(projects)
 
     return projects
+
+
+def tally_results(event):
+    """
+    Execute database query to tally votes for submitted projects.
+    """
+    from django.db.models import Count
+    from projects.models import Project
+
+    qs = (
+        Project.objects.filter(
+            team__event=event,
+            status="submitted",
+        )
+        .annotate(vote_count=Count("votes"))
+        .order_by("-vote_count", "pk")
+    )
+    return [
+        {
+            "id": p.pk,
+            "title": p.title,
+            "votes": p.vote_count,
+        }
+        for p in qs
+    ]
+
+
+def get_results(event):
+    """
+    Return vote counts per submitted project for the given event.
+
+    Results are hidden until voting is closed. If voting is not closed,
+    raises VotingClosedError so results are never calculated or returned.
+
+    Returns a list of dicts: [{"id": int, "title": str, "votes": int}, ...]
+    sorted by votes descending, then project id ascending.
+    Includes all submitted projects, including zero-vote ones.
+    """
+    if not is_voting_closed(event):
+        raise VotingClosedError("Results are hidden until voting closes.")
+
+    return tally_results(event)
