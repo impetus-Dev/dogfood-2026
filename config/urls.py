@@ -9,4 +9,5 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('teams/', include('teams.urls')),
     path('projects/', include('projects.urls')),
+    path('api/', include('voting.urls')),
 ]

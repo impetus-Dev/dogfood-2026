@@ -77,6 +77,12 @@ class Vote(models.Model):
                 ),
                 name="vote_exactly_one_identity",
             ),
+            # Invariant: One token can cast at most one vote total (across all projects)
+            models.UniqueConstraint(
+                fields=["voting_token"],
+                condition=models.Q(voting_token__isnull=False),
+                name="unique_vote_per_token_total",
+            ),
         ]
 
     def clean(self):
