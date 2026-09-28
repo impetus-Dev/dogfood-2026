@@ -1,1 +1,1 @@
-"""Events app."""
+# events package

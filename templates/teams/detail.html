@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.name }} — Team Detail — DOGFOOD 2026</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+</head>
+<body class="bg-light py-5">
+    <div class="container" style="max-width: 700px;">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="card-title mb-0" id="team-name">{{ team.name }}</h2>
+                    <span class="badge bg-secondary" id="event-name">{{ event.name }}</span>
+                </div>
+
+                <div class="card bg-white border mb-4">
+                    <div class="card-body">
+                        <h5 class="card-subtitle mb-2 text-muted">Invite Link</h5>
+                        <p class="card-text mb-2">Share this link to invite team members:</p>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="invite-url" value="{{ invite_url }}" readonly>
+                        </div>
+                        <small class="text-muted">Invite code: <strong id="invite-code">{{ team.invite_code }}</strong></small>
+                    </div>
+                </div>
+
+                <h4 class="mb-3">Team Members ({{ memberships.count }})</h4>
+                <ul class="list-group mb-3" id="member-list">
+                    {% for membership in memberships %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ membership.user.username }}</span>
+                        {% if membership.user == request.user %}
+                        <span class="badge bg-primary">You</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                {% if is_member %}
+                <div class="alert alert-success py-2 mb-0" role="alert">
+                    You are a member of this team.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

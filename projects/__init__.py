@@ -1,1 +1,1 @@
-"""Projects app."""
+# projects package

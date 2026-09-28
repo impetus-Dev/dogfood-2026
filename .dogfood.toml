@@ -1,0 +1,18 @@
+[portal]
+base_url = "http://localhost:8080"
+
+[tiers]
+claimed = ["T1"]
+
+[auth]
+organizer = "Cookie: session=org_7f2a"
+judge_a = "Cookie: session=jdg_a_91bc"
+judge_b = "Cookie: session=jdg_b_44de"
+participant = "Cookie: session=prt_2e88"
+
+[routes]
+gallery = "/projects"
+submit = "/projects/new"
+judge_scores = "/judging/scores"
+peer_scores = "/judging/scores"
+csv_export = "/judging/export"
