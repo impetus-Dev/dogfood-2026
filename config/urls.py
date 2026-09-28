@@ -14,4 +14,5 @@ urlpatterns = [
     path('projects/submit', project_create, name='project_submit_noslash'),
     path('projects/', include('projects.urls')),
     path('api/', include('voting.urls')),
+    path('', include('judging.urls')),
 ]

@@ -2,7 +2,7 @@
 base_url = "http://localhost:8080"
 
 [tiers]
-claimed = ["T1"]
+claimed = ["T1", "T2"]
 
 [auth]
 organizer = "Cookie: session=org_7f2a"
@@ -13,6 +13,7 @@ participant = "Cookie: session=prt_2e88"
 [routes]
 gallery = "/projects"
 submit = "/projects/new"
-judge_scores = "/judging/scores"
-peer_scores = "/judging/scores"
-csv_export = "/judging/export"
+judge_scores = "/api/judge/scores/"
+peer_scores = "/api/judge/scores/?judge=judge_a"
+csv_export = "/api/export.csv"
+
