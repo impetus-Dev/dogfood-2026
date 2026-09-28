@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'events',
     'teams',
     'projects',
+    'voting',
 ]
 
 MIDDLEWARE = [
