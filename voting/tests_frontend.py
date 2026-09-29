@@ -183,3 +183,63 @@ class VotingFrontendTests(TestCase):
         self.assertContains(resp, "Impressive prototype!")
         self.assertContains(resp, "Leave a Comment")
         self.assertContains(resp, "btn-post-comment")
+
+    def test_ballot_page_closed_voting_state(self):
+        self.auth_event.voting_close = timezone.now() - timezone.timedelta(hours=1)
+        self.auth_event.save()
+        self.client.force_login(self.voter1)
+        resp = self.client.get(reverse("ballot_page", kwargs={"event_id": self.auth_event.pk}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Voting Closed")
+        self.assertContains(resp, "voting-closed-alert")
+        self.assertContains(resp, "Closed")
+
+    def test_ballot_page_already_voted_state(self):
+        Vote.objects.create(event=self.auth_event, project=self.project1, voter=self.voter1)
+        self.client.force_login(self.voter1)
+        resp = self.client.get(reverse("ballot_page", kwargs={"event_id": self.auth_event.pk}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f"voted-btn-{self.project1.pk}")
+        self.assertContains(resp, "Voted &check;")
+
+    def test_results_page_ordering_preserved(self):
+        Vote.objects.create(event=self.auth_event, project=self.project2, voter=self.voter1)
+        Vote.objects.create(event=self.auth_event, project=self.project2, voter=self.voter2)
+        voter3 = User.objects.create_user(username="voter_charlie", password="password123")
+        Vote.objects.create(event=self.auth_event, project=self.project1, voter=voter3)
+
+        self.auth_event.voting_close = timezone.now() - timezone.timedelta(hours=1)
+        self.auth_event.save()
+
+        resp = self.client.get(reverse("results_page", kwargs={"event_id": self.auth_event.pk}))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode("utf-8")
+        pos_quantum = content.find("Quantum Relay")
+        pos_solaris = content.find("Solaris Protocol")
+        self.assertTrue(pos_quantum != -1 and pos_solaris != -1)
+        self.assertTrue(pos_quantum < pos_solaris)
+
+    def test_security_ballot_and_results_no_sensitive_data_leak(self):
+        token_str = secrets.token_urlsafe(32)
+        vt = VotingToken.objects.create(event=self.link_event, token=token_str)
+
+        # 1. Ballot page
+        resp_ballot = self.client.get(f"{reverse('ballot_page', kwargs={'event_id': self.link_event.pk})}?token={token_str}")
+        self.assertEqual(resp_ballot.status_code, 200)
+        ballot_content = resp_ballot.content.decode("utf-8")
+        # Invite codes must never be leaked
+        self.assertNotIn("code1", ballot_content)
+        self.assertNotIn("code2", ballot_content)
+        # Raw token must not appear in visible body text outside hidden form inputs
+        body_without_inputs = ballot_content.replace(f'value="{token_str}"', '').replace(f'"{token_str}"', '')
+        self.assertNotIn(token_str, body_without_inputs)
+
+        # 2. Results page
+        self.link_event.voting_close = timezone.now() - timezone.timedelta(hours=1)
+        self.link_event.save()
+        resp_results = self.client.get(reverse("results_page", kwargs={"event_id": self.link_event.pk}))
+        self.assertEqual(resp_results.status_code, 200)
+        results_content = resp_results.content.decode("utf-8")
+        self.assertNotIn("code1", results_content)
+        self.assertNotIn("code2", results_content)
+        self.assertNotIn(token_str, results_content)

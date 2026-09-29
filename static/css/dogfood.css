@@ -597,6 +597,14 @@ html, body {
   border-color: #ef4444;
 }
 
+.btn-df-primary.btn-sm,
+.btn-df-accent.btn-sm,
+.btn-df-glass.btn-sm,
+.btn-df-danger.btn-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+}
+
 /* ==========================================================================
    MEDIUM-LIKE EDITORIAL PROJECT FEED
    ========================================================================== */
