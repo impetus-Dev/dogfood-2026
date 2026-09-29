@@ -200,6 +200,12 @@ def project_detail(request, pk):
     )
     is_deadline_passed = timezone.now() >= project.team.event.submissions_close
 
+    comments = (
+        list(project.comments.all().order_by("created_at", "id"))
+        if project.status == "submitted"
+        else []
+    )
+
     return render(
         request,
         "projects/detail.html",
@@ -212,6 +218,7 @@ def project_detail(request, pk):
             "is_deadline_passed": is_deadline_passed,
             "can_edit": is_member and project.status == "draft",
             "can_submit": is_member and project.status == "draft" and not is_deadline_passed,
+            "comments": comments,
         },
     )
 

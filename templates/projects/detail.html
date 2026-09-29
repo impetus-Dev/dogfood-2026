@@ -73,6 +73,136 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Comments Section (Submitted Projects Only) -->
+        {% if project.status == 'submitted' %}
+        <div class="card shadow-sm mb-4" id="project-comments-card">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" id="comments-heading">Community Comments (<span id="comments-count">{{ comments|length }}</span>)</h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Comments List -->
+                <div id="comments-list" class="mb-4">
+                    {% if comments %}
+                        {% for comment in comments %}
+                        <div class="border-bottom pb-3 mb-3 comment-item" id="comment-{{ comment.id }}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="comment-author text-dark">{{ comment.author_name }}</strong>
+                                <small class="text-muted">{{ comment.created_at|date:"Y-m-d H:i" }} UTC</small>
+                            </div>
+                            <p class="comment-text mb-0 text-secondary" style="white-space: pre-wrap;">{{ comment.text }}</p>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0" id="no-comments-msg">No comments yet. Be the first to share feedback!</p>
+                    {% endif %}
+                </div>
+
+                <!-- Comment Form -->
+                <hr>
+                <h6 class="mb-3">Leave a Comment</h6>
+                <div id="comment-alert-box"></div>
+                <form id="comment-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="comment-author" class="form-label small text-muted">Your Name / Display Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="comment-author" name="author_name" value="{% if user.is_authenticated %}{{ user.username }}{% endif %}" placeholder="e.g. Alex Rivera" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment-text" class="form-label small text-muted">Feedback / Comment <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="comment-text" name="text" rows="3" placeholder="Share your feedback or questions..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm" id="btn-post-comment">Post Comment</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const form = document.getElementById("comment-form");
+            if (!form) return;
+            const alertBox = document.getElementById("comment-alert-box");
+            const commentsList = document.getElementById("comments-list");
+            const countEl = document.getElementById("comments-count");
+            const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+            form.addEventListener("submit", function(e) {
+                e.preventDefault();
+                alertBox.innerHTML = "";
+                const authorInput = document.getElementById("comment-author");
+                const textInput = document.getElementById("comment-text");
+                const authorName = authorInput.value.trim();
+                const text = textInput.value.trim();
+
+                if (!authorName || !text) {
+                    alertBox.innerHTML = '<div class="alert alert-danger py-2 small">Author name and comment text cannot be blank.</div>';
+                    return;
+                }
+
+                const btn = document.getElementById("btn-post-comment");
+                btn.disabled = true;
+
+                fetch("/api/projects/{{ project.id }}/comments/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: JSON.stringify({
+                        author_name: authorName,
+                        text: text
+                    })
+                })
+                .then(function(res) {
+                    return res.json().then(function(data) {
+                        return { status: res.status, data: data };
+                    });
+                })
+                .then(function(result) {
+                    btn.disabled = false;
+                    if (result.status === 201) {
+                        const noMsg = document.getElementById("no-comments-msg");
+                        if (noMsg) noMsg.remove();
+
+                        const c = result.data;
+                        const dateStr = c.created_at ? new Date(c.created_at).toISOString().replace("T", " ").substring(0, 16) + " UTC" : "Just now";
+                        const div = document.createElement("div");
+                        div.className = "border-bottom pb-3 mb-3 comment-item";
+                        div.id = "comment-" + c.id;
+                        div.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="comment-author text-dark">${escapeHtml(c.author_name)}</strong>
+                                <small class="text-muted">${dateStr}</small>
+                            </div>
+                            <p class="comment-text mb-0 text-secondary" style="white-space: pre-wrap;">${escapeHtml(c.text)}</p>
+                        `;
+                        commentsList.appendChild(div);
+
+                        textInput.value = "";
+                        if (countEl) {
+                            const cur = parseInt(countEl.textContent, 10) || 0;
+                            countEl.textContent = cur + 1;
+                        }
+                        alertBox.innerHTML = '<div class="alert alert-success py-2 small">Comment posted successfully!</div>';
+                    } else {
+                        const err = result.data.author_name || result.data.text || result.data.detail || "Failed to post comment.";
+                        alertBox.innerHTML = `<div class="alert alert-danger py-2 small">${escapeHtml(Array.isArray(err) ? err.join(' ') : String(err))}</div>`;
+                    }
+                })
+                .catch(function(err) {
+                    btn.disabled = false;
+                    alertBox.innerHTML = '<div class="alert alert-danger py-2 small">Network error while posting comment.</div>';
+                });
+            });
+
+            function escapeHtml(str) {
+                const p = document.createElement('p');
+                p.textContent = str;
+                return p.innerHTML;
+            }
+        });
+        </script>
+        {% endif %}
     </div>
 </body>
 </html>
