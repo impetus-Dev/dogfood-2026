@@ -33,6 +33,7 @@ def dashboard_view(request):
         role = "organizer"
 
     active_event = Event.objects.first()
+    now = timezone.now()
 
     if role in ("organizer", "admin"):
         # Real metrics query — zero fabricated data
@@ -53,7 +54,6 @@ def dashboard_view(request):
         )
 
         # Real community voting state
-        now = timezone.now()
         is_voting_open = (
             (active_event.voting_close is None or active_event.voting_close > now)
             if active_event
@@ -88,16 +88,20 @@ def dashboard_view(request):
         return render(request, "dashboard/organizer.html", context)
 
     elif role == "judge":
-        # Judge dashboard context (prepared for Judge phase)
+        # Judge dashboard: strict backend isolation — judge sees ONLY own assignments & scores
         assignments = (
             JudgeAssignment.objects.filter(judge=request.user)
             .select_related("project", "project__team", "project__track")
+            .order_by("project__id")
         )
         assigned_count = assignments.count()
-        scored_project_ids = set(
-            Score.objects.filter(judge=request.user).values_list("project_id", flat=True)
-        )
-        completed_count = len(scored_project_ids)
+
+        # Query judge's own scores only (never peer scores)
+        judge_scores = {
+            s.project_id: s
+            for s in Score.objects.filter(judge=request.user)
+        }
+        completed_count = len(judge_scores)
         remaining_count = max(0, assigned_count - completed_count)
         progress_pct = (
             int((completed_count / assigned_count) * 100)
@@ -105,40 +109,60 @@ def dashboard_view(request):
             else 0
         )
 
+        # Rubric criteria for the event
         criteria = (
             RubricCriterion.objects.filter(event=active_event)
             if active_event
             else []
         )
 
+        enriched_assignments = []
+        for a in assignments:
+            s = judge_scores.get(a.project_id)
+            enriched_assignments.append({
+                "assignment": a,
+                "project": a.project,
+                "is_scored": bool(s),
+                "criteria_scores": s.criteria_scores if s else {},
+                "comment": s.comment if s else "",
+            })
+
         context = {
             "active_event": active_event,
-            "assignments": assignments,
+            "enriched_assignments": enriched_assignments,
             "assigned_count": assigned_count,
             "completed_count": completed_count,
             "remaining_count": remaining_count,
             "progress_pct": progress_pct,
-            "scored_project_ids": scored_project_ids,
             "criteria": criteria,
             "role": role,
         }
         return render(request, "dashboard/judge.html", context)
 
     else:
-        # Participant / default dashboard context
+        # Participant workspace: real team & project data
         membership = (
             TeamMembership.objects.filter(user=request.user)
             .select_related("team", "team__event")
             .first()
         )
         team = membership.team if membership else None
+        teammates = (
+            TeamMembership.objects.filter(team=team).select_related("user")
+            if team
+            else []
+        )
         project = (
             Project.objects.filter(team=team).select_related("track").first()
             if team
             else None
         )
 
-        now = timezone.now()
+        is_submission_open = (
+            (active_event.submissions_close is None or active_event.submissions_close > now)
+            if active_event
+            else False
+        )
         is_voting_open = (
             (active_event.voting_close is None or active_event.voting_close > now)
             if active_event
@@ -148,8 +172,10 @@ def dashboard_view(request):
         context = {
             "active_event": active_event,
             "team": team,
+            "teammates": teammates,
             "project": project,
             "membership": membership,
+            "is_submission_open": is_submission_open,
             "is_voting_open": is_voting_open,
             "role": role,
         }

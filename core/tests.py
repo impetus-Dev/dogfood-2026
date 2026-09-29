@@ -8,7 +8,7 @@ from accounts.models import Profile
 from events.models import Event, Track
 from judging.models import JudgeAssignment, RubricCriterion, Score
 from projects.models import Project
-from teams.models import Team
+from teams.models import Team, TeamMembership
 
 User = get_user_model()
 
@@ -21,9 +21,10 @@ class CoreCommandTest(TestCase):
         self.assertIn("seed_fixtures", output)
 
 
-class LoginAndOrganizerDashboardTest(TestCase):
+class LoginAndRoleAwareDashboardTest(TestCase):
     """
-    Focused tests for Phase 2: Login experience and Organizer dashboard.
+    Focused tests for Phase 2: Login experience and role-aware dashboards
+    (Organizer, Judge, Participant).
     """
 
     def setUp(self):
@@ -49,11 +50,17 @@ class LoginAndOrganizerDashboardTest(TestCase):
         )
         Profile.objects.create(user=self.admin_user, role="admin")
 
-        # Judge User
-        self.judge = User.objects.create_user(
-            username="test_judge", password="secure_password_3"
+        # Judge User A
+        self.judge_a = User.objects.create_user(
+            username="test_judge_a", password="secure_password_3"
         )
-        Profile.objects.create(user=self.judge, role="judge")
+        Profile.objects.create(user=self.judge_a, role="judge")
+
+        # Judge User B (Peer Judge)
+        self.judge_b = User.objects.create_user(
+            username="test_judge_b", password="secure_password_5"
+        )
+        Profile.objects.create(user=self.judge_b, role="judge")
 
         # Participant User & Team
         self.participant = User.objects.create_user(
@@ -64,6 +71,8 @@ class LoginAndOrganizerDashboardTest(TestCase):
         self.team = Team.objects.create(
             name="CyberTeam", event=self.event, invite_code="inv12345"
         )
+        TeamMembership.objects.create(team=self.team, user=self.participant)
+
         self.project = Project.objects.create(
             team=self.team,
             track=self.track,
@@ -78,14 +87,25 @@ class LoginAndOrganizerDashboardTest(TestCase):
         self.criterion = RubricCriterion.objects.create(
             event=self.event, name="Innovation", weight=1.5
         )
-        self.assignment = JudgeAssignment.objects.create(
-            judge=self.judge, project=self.project
+        self.assignment_a = JudgeAssignment.objects.create(
+            judge=self.judge_a, project=self.project
         )
-        self.score = Score.objects.create(
-            judge=self.judge,
+        self.score_a = Score.objects.create(
+            judge=self.judge_a,
             project=self.project,
             criteria_scores={"Innovation": 9},
-            comment="Excellent work!",
+            comment="Judge A private feedback",
+        )
+
+        # Peer Judge B Assignment & Score
+        self.assignment_b = JudgeAssignment.objects.create(
+            judge=self.judge_b, project=self.project
+        )
+        self.score_b = Score.objects.create(
+            judge=self.judge_b,
+            project=self.project,
+            criteria_scores={"Innovation": 4},
+            comment="Judge B confidential review",
         )
 
     # --- Login Tests ---
@@ -144,9 +164,9 @@ class LoginAndOrganizerDashboardTest(TestCase):
         self.assertEqual(response.context["total_projects"], 1)
         self.assertEqual(response.context["submitted_projects"], 1)
         self.assertEqual(response.context["total_teams"], 1)
-        self.assertEqual(response.context["total_judges"], 1)
-        self.assertEqual(response.context["total_assignments"], 1)
-        self.assertEqual(response.context["total_scores"], 1)
+        self.assertEqual(response.context["total_judges"], 2)
+        self.assertEqual(response.context["total_assignments"], 2)
+        self.assertEqual(response.context["total_scores"], 2)
 
         # Check content renders real values
         self.assertContains(response, "Sample Hack 2026")
@@ -161,10 +181,49 @@ class LoginAndOrganizerDashboardTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dashboard/organizer.html")
 
-    def test_participant_isolated_from_organizer_dashboard_content(self):
-        """Participant visiting dashboard does not see the organizer control center template."""
+    # --- Judge Dashboard Tests ---
+
+    def test_judge_dashboard_loads_and_isolates_peer_scores(self):
+        """Judge dashboard displays assigned projects and own scores, isolating peer data."""
+        self.client.force_login(self.judge_a)
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertTemplateUsed(response, "dashboard/judge.html")
+        self.assertTemplateNotUsed(response, "dashboard/organizer.html")
+
+        # Metrics
+        self.assertEqual(response.context["assigned_count"], 1)
+        self.assertEqual(response.context["completed_count"], 1)
+        self.assertEqual(response.context["remaining_count"], 0)
+
+        # Content shows Judge A's own score/comment
+        self.assertContains(response, "Cyber Project")
+        self.assertContains(response, "Judge A private feedback")
+
+        # PRIVACY ASSERTION: Peer Judge B's review is NEVER visible to Judge A
+        self.assertNotContains(response, "Judge B confidential review")
+
+    # --- Participant Dashboard Tests ---
+
+    def test_participant_dashboard_loads_with_team_and_project(self):
+        """Participant dashboard displays user's team and project status."""
         self.client.force_login(self.participant)
         response = self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateNotUsed(response, "dashboard/organizer.html")
+
         self.assertTemplateUsed(response, "dashboard/participant.html")
+        self.assertTemplateNotUsed(response, "dashboard/organizer.html")
+        self.assertTemplateNotUsed(response, "dashboard/judge.html")
+
+        # Checks team and project context
+        self.assertEqual(response.context["team"], self.team)
+        self.assertEqual(response.context["project"], self.project)
+        self.assertContains(response, "CyberTeam")
+        self.assertContains(response, "Cyber Project")
+        self.assertContains(response, "Participant Workspace")
+
+        # PRIVACY ASSERTION: Participant cannot see organizer or judge private data
+        self.assertNotContains(response, "Control Center")
+        self.assertNotContains(response, "Judge A private feedback")
+        self.assertNotContains(response, "Judge B confidential review")

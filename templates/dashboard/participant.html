@@ -1,64 +1,159 @@
 {% extends "base.html" %}
 
-{% block title %}Participant Dashboard — DOGFOOD 2026{% endblock %}
+{% block title %}Hacker Workspace — DOGFOOD 2026{% endblock %}
 {% block page_title %}Participant Workspace{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column gap-4">
+
+    <!-- 1. HERO / EVENT CONTEXT -->
     <div class="df-card df-card-glow-pink p-4">
-        <h2 class="h3 fw-bold mb-2">Hacker Workspace</h2>
-        <p class="text-secondary mb-0">Project development and submission tracking for {{ request.user.username }}.</p>
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-role badge-role-participant">HACKER WORKSPACE</span>
+                    <span class="meta-pill text-muted small">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Project Development & Submission
+                    </span>
+                </div>
+                <h2 class="h2 fw-bold mb-2" style="letter-spacing: -0.5px; color: var(--df-text-main);">
+                    Welcome, {{ request.user.username }}
+                </h2>
+                <p class="mb-0 text-secondary" style="font-size: 0.95rem;">
+                    Participating in <strong>{{ active_event.name|default:"DOGFOOD 2026 Hackathon" }}</strong>.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-inline-flex flex-column align-items-lg-end gap-1 p-3 rounded" style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--df-border-subtle);">
+                    <div class="small text-muted text-uppercase" style="letter-spacing: 0.8px; font-weight: 600;">Submissions Status</div>
+                    {% if is_submission_open %}
+                    <span class="badge bg-success text-white">SUBMISSIONS OPEN</span>
+                    {% else %}
+                    <span class="badge bg-danger text-white">SUBMISSIONS CLOSED</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- 2. TEAM & PROJECT CARDS -->
     <div class="row g-4">
+        <!-- Team Status Card -->
         <div class="col-lg-6">
             <div class="df-card h-100">
                 <div class="df-card-header">
-                    <h3 class="df-card-title">Team Information</h3>
+                    <h3 class="df-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--df-cyan)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Team Information
+                    </h3>
                     <a href="/teams/create/" class="btn-df-glass btn-sm">Team Options</a>
                 </div>
+
                 {% if team %}
-                <div class="d-flex flex-column gap-2">
-                    <div><span class="text-muted">Team Name:</span> <strong class="text-white">{{ team.name }}</strong></div>
-                    {% if membership %}
-                    <div><span class="text-muted">Your Role:</span> <span class="badge bg-secondary text-white">Member</span></div>
-                    {% endif %}
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <div class="small text-muted mb-1">Team Name</div>
+                        <div class="h5 fw-bold text-white mb-0" id="participant-team-name">{{ team.name }}</div>
+                    </div>
+
+                    <div class="p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <div class="small text-muted mb-1">Invite Code</div>
+                        <div class="fw-semibold text-white" style="font-family: monospace;">{{ team.invite_code }}</div>
+                    </div>
+
+                    <div>
+                        <div class="small text-muted text-uppercase mb-2" style="font-weight: 600; letter-spacing: 0.8px;">Teammates ({{ teammates|length }})</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for tm in teammates %}
+                            <span class="badge bg-secondary text-white py-2 px-3">
+                                {{ tm.user.username }}{% if tm.user == request.user %} (You){% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
                 {% else %}
-                <p class="text-muted mb-3">You are not currently part of any hackathon team.</p>
-                <a href="/teams/create/" class="btn-df-primary btn-sm">Create or Join a Team</a>
+                <div class="text-center py-4">
+                    <p class="text-muted mb-3">You are not currently part of any hackathon team.</p>
+                    <a href="/teams/create/" class="btn-df-primary btn-sm">+ Create or Join Team</a>
+                </div>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Project Status Card -->
         <div class="col-lg-6">
             <div class="df-card h-100">
                 <div class="df-card-header">
-                    <h3 class="df-card-title">Project Submission</h3>
+                    <h3 class="df-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--df-pink)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        Project Submission
+                    </h3>
                     {% if project %}
-                    <a href="{% url 'projects:detail' project.pk %}" class="btn-df-glass btn-sm">View Project</a>
+                    <a href="{% url 'projects:detail' project.pk %}" class="btn-df-glass btn-sm">View Page →</a>
                     {% endif %}
                 </div>
+
                 {% if project %}
-                <div class="d-flex flex-column gap-2">
-                    <div><span class="text-muted">Project:</span> <strong class="text-white">{{ project.title }}</strong></div>
-                    <div><span class="text-muted">Track:</span> <span class="badge bg-info text-dark">{{ project.track.name }}</span></div>
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted">Project Title</span>
+                            {% if project.status == 'submitted' %}
+                            <span class="status-indicator status-submitted">Submitted</span>
+                            {% else %}
+                            <span class="status-indicator status-draft">Draft</span>
+                            {% endif %}
+                        </div>
+                        <div class="h5 fw-bold text-white mb-0" id="participant-project-title">{{ project.title }}</div>
+                    </div>
+
+                    <div class="p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <div class="small text-muted mb-1">Track</div>
+                        <div class="fw-semibold text-white">{{ project.track.name }}</div>
+                    </div>
+
+                    {% if project.summary %}
                     <div>
-                        <span class="text-muted">Status:</span>
-                        {% if project.status == 'submitted' %}
-                        <span class="badge bg-success text-white">Submitted</span>
-                        {% else %}
-                        <span class="badge bg-warning text-dark">Draft</span>
-                        <a href="{% url 'projects:edit' project.pk %}" class="ms-2 btn-df-glass btn-sm">Edit Draft</a>
+                        <div class="small text-muted mb-1">Summary</div>
+                        <p class="text-secondary small mb-0">{{ project.summary|truncatewords:25 }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 pt-2 mt-auto">
+                        <a href="{% url 'projects:detail' project.pk %}" class="btn-df-glass btn-sm">View in Gallery</a>
+                        {% if project.status == 'draft' and is_submission_open %}
+                        <a href="{% url 'projects:edit' project.pk %}" class="btn-df-primary btn-sm">Edit Draft</a>
+                        {% endif %}
+                        {% if project.repo_url %}
+                        <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" class="btn-df-glass btn-sm">Repository ↗</a>
                         {% endif %}
                     </div>
                 </div>
                 {% else %}
-                <p class="text-muted mb-3">No project created for your team yet.</p>
-                <a href="{% url 'projects:create' %}" class="btn-df-primary btn-sm">+ Submit Project</a>
+                <div class="text-center py-4">
+                    <p class="text-muted mb-3">No project created for your team yet.</p>
+                    {% if is_submission_open %}
+                    <a href="{% url 'projects:create' %}" class="btn-df-primary btn-sm">+ Submit Project</a>
+                    {% else %}
+                    <span class="badge bg-secondary text-white">Submissions Closed</span>
+                    {% endif %}
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
+
+    <!-- 3. COMMUNITY & EXPLORATION -->
+    <div class="df-card">
+        <h4 class="h6 text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.8px;">Community & Voting</h4>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">Browse All Projects</a>
+            <a href="/vote/{{ active_event_id }}/" class="btn-df-glass btn-sm">Community Voting Ballot</a>
+            <a href="/results/{{ active_event_id }}/" class="btn-df-glass btn-sm">Event Results</a>
+        </div>
+    </div>
+
 </div>
 {% endblock %}

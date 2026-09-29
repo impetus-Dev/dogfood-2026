@@ -5,57 +5,150 @@
 
 {% block content %}
 <div class="d-flex flex-column gap-4">
+
+    <!-- 1. HERO / EVENT CONTEXT -->
     <div class="df-card df-card-glow-pink p-4">
-        <h2 class="h3 fw-bold mb-2">Judge Evaluation Panel</h2>
-        <p class="text-secondary mb-0">Assigned projects and scoring rubric context for {{ request.user.username }}.</p>
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-role badge-role-judge">JUDGE PANEL</span>
+                    <span class="meta-pill text-muted small">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                        Evaluator Workspace
+                    </span>
+                </div>
+                <h2 class="h2 fw-bold mb-2" style="letter-spacing: -0.5px; color: var(--df-text-main);">
+                    Welcome back, {{ request.user.username }}
+                </h2>
+                <p class="mb-0 text-secondary" style="font-size: 0.95rem;">
+                    Evaluating submissions for <strong>{{ active_event.name|default:"DOGFOOD 2026 Hackathon" }}</strong>.
+                    Peer score isolation is strictly enforced.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-inline-flex flex-column align-items-lg-end gap-1 p-3 rounded" style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--df-border-subtle);">
+                    <div class="small text-muted text-uppercase" style="letter-spacing: 0.8px; font-weight: 600;">Overall Progress</div>
+                    <div class="h4 fw-bold text-white mb-0" style="font-feature-settings: 'tnum';">
+                        {{ progress_pct }}%
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- 2. OVERVIEW STAT CARDS -->
     <div class="df-stat-grid mb-0">
         <div class="df-stat-card">
             <div class="df-stat-label">Assigned Projects</div>
             <div class="df-stat-value" id="metric-assigned-count">{{ assigned_count }}</div>
+            <div class="df-stat-subtext">Total projects allocated for your review</div>
         </div>
+
         <div class="df-stat-card stat-pink">
             <div class="df-stat-label">Completed Evaluations</div>
             <div class="df-stat-value text-white" id="metric-completed-count">{{ completed_count }}</div>
+            <div class="df-stat-subtext">Scores submitted and recorded</div>
         </div>
+
         <div class="df-stat-card">
-            <div class="df-stat-label">Remaining Projects</div>
-            <div class="df-stat-value" id="metric-remaining-count">{{ remaining_count }}</div>
+            <div class="df-stat-label">Remaining Evaluations</div>
+            <div class="df-stat-value text-warning" id="metric-remaining-count">{{ remaining_count }}</div>
+            <div class="df-stat-subtext">Awaiting your evaluation</div>
         </div>
     </div>
 
+    <!-- 3. RUBRIC CRITERIA CARD -->
+    {% if criteria %}
+    <div class="df-card">
+        <div class="df-card-header">
+            <h3 class="df-card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--df-cyan)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Judging Rubric Criteria
+            </h3>
+            <span class="small text-muted">{{ criteria|length }} Criteria Defined</span>
+        </div>
+        <div class="row g-3">
+            {% for c in criteria %}
+            <div class="col-md-4">
+                <div class="p-3 rounded h-100" style="background: rgba(0, 0, 0, 0.25); border: 1px solid var(--df-border-subtle);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="text-white">{{ c.name }}</strong>
+                        <span class="badge bg-secondary text-white">Weight: {{ c.weight }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. ASSIGNED PROJECTS LIST -->
     <div class="df-card" id="assigned-projects">
         <div class="df-card-header">
-            <h3 class="df-card-title">Assigned Projects</h3>
+            <h3 class="df-card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                Your Assigned Submissions
+            </h3>
+            <a href="/api/judge/scores/" class="btn-df-glass btn-sm">My Scores API (JSON) →</a>
         </div>
-        {% if assignments %}
+
+        {% if enriched_assignments %}
         <div class="table-responsive">
-            <table class="df-table">
+            <table class="df-table" id="assigned-projects-table">
                 <thead>
                     <tr>
                         <th>Project</th>
                         <th>Team</th>
                         <th>Track</th>
-                        <th>Status</th>
+                        <th>Evaluation Status</th>
+                        <th>Your Scores</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for assignment in assignments %}
+                    {% for item in enriched_assignments %}
                     <tr>
-                        <td>{{ assignment.project.title }}</td>
-                        <td>{{ assignment.project.team.name }}</td>
-                        <td>{{ assignment.project.track.name }}</td>
                         <td>
-                            {% if assignment.project.id in scored_project_ids %}
+                            <a href="{% url 'projects:detail' item.project.pk %}" class="fw-semibold text-white text-decoration-none">
+                                {{ item.project.title }}
+                            </a>
+                        </td>
+                        <td>{{ item.project.team.name }}</td>
+                        <td>
+                            <span class="meta-pill small">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 16 12 12 8"></polygon></svg>
+                                {{ item.project.track.name }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.is_scored %}
                             <span class="badge bg-success text-white">Scored</span>
                             {% else %}
-                            <span class="badge bg-warning text-dark">Pending Evaluation</span>
+                            <span class="badge bg-warning text-dark">Pending Review</span>
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'projects:detail' assignment.project.pk %}" class="btn-df-glass btn-sm">View Project</a>
+                            {% if item.is_scored %}
+                            <div class="small" style="font-family: monospace; color: var(--df-cyan);">
+                                {% for crit_name, crit_val in item.criteria_scores.items %}
+                                <span>{{ crit_name }}: {{ crit_val }}</span>{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                <span>Recorded</span>
+                                {% endfor %}
+                            </div>
+                            {% if item.comment %}
+                            <div class="small text-muted text-truncate" style="max-width: 200px;" title="{{ item.comment }}">
+                                "{{ item.comment }}"
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <span class="small text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'projects:detail' item.project.pk %}" class="btn-df-glass btn-sm">
+                                View Project
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -66,5 +159,6 @@
         <p class="text-muted mb-0">No projects currently assigned for evaluation.</p>
         {% endif %}
     </div>
+
 </div>
 {% endblock %}
