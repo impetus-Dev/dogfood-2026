@@ -55,6 +55,7 @@ Business logic is decoupled from HTTP view handlers and encapsulated in dedicate
 - **`voting/services.py`**: Atomic vote casting, deterministic identity-seeded ballot ordering via SHA-256, and tamper-proof active-window results hiding.
 - **`audit/services.py`**: Immutable audit event logging tracking all state-changing actions, duplicate vote rejections, and access anomalies.
 - **`t4/services.py`**: Cryptographic attestation producing deterministic canonical JSON payloads signed with Ed25519 keys, verifiable via REST API or offline CLI.
+- **`t4/bulk_services.py`**: Bulk JSON export engine with recursive secret scrubbing, and atomic bulk import engine with whole-payload pre-validation, dry-run simulation, and `external_id` reconciliation.
 
 ### 2.3 Data & Constraint Layer
 - All critical business invariants are enforced directly in the database schema via Django `UniqueConstraint` and `CheckConstraint` declarations.

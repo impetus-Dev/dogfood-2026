@@ -126,9 +126,10 @@ python manage.py verify_judge_record <record_id>
 3. **WhiteNoise Manifest Requirements:**
    - The project uses `whitenoise.storage.CompressedManifestStaticFilesStorage`. When running with `DEBUG=False`, static asset hashes are resolved via `staticfiles.json`. `python manage.py collectstatic --noinput` must be executed before serving traffic.
 
-4. **API Schema & Bulk Export:**
-   - DRF standard schema generation requires extra packages (`uritemplate`, `pyyaml`) which are deliberately omitted to adhere to standard-library dependency constraints.
-   - CSV export (`/api/export.csv`) is fully functional with RFC 4180 escaping and role isolation, but no compressed multi-event zip archive exporter is implemented.
+4. **API Schema & Bulk Operations:**
+   - Both `/api/export.csv` (RFC 4180 CSV export) and `/api/export/bulk/` (sanitized bulk JSON export with zero password/secret leakage) are fully functional and restricted to organizer and admin roles.
+   - Bulk JSON import (`/api/import/bulk/`) provides whole-payload pre-validation, `?dry_run=true` non-destructive simulation, and `transaction.atomic()` all-or-nothing rollback.
+   - OpenAPI 3.0.3 machine-readable documentation is directly served at `/api/schema/` and `/api/openapi.json` without third-party dependencies.
 
 ---
 

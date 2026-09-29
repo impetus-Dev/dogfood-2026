@@ -157,3 +157,35 @@ class AcceptanceSmokeTests(TestCase):
         # Tampered payload fails verification
         tampered_payload = {"event_id": self.closed_event.pk, "judge": self.judge_a.username, "score": 10}
         self.assertFalse(verify_payload_signature(tampered_payload, sig, public_key=pub_key))
+
+    def test_t4_bulk_export_and_import_roundtrip(self):
+        """T4 Bulk export returns sanitized data and import supports atomic transactions."""
+        # Unauthenticated -> 401
+        res = self.client.get("/api/export/bulk/")
+        self.assertEqual(res.status_code, 401)
+
+        # Organizer -> 200
+        self.client.force_login(self.organizer)
+        res = self.client.get("/api/export/bulk/")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("projects", data)
+        self.assertIn("events", data)
+
+        # Dry-run import -> 200 without DB modification
+        count_before = Project.objects.count()
+        dry_res = self.client.post(
+            "/api/import/bulk/?dry_run=true",
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(dry_res.status_code, 200)
+        self.assertEqual(Project.objects.count(), count_before)
+
+    def test_t4_openapi_schema_endpoint(self):
+        """OpenAPI schema is served as JSON with valid structure."""
+        res = self.client.get("/api/schema/")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get("openapi"), "3.0.3")
+        self.assertIn("/api/export/bulk/", data.get("paths", {}))

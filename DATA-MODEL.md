@@ -189,3 +189,19 @@ The management command `python manage.py seed_fixtures` reads `fixtures.json` id
 - **Content Type:** `text/csv` with header `Content-Disposition: attachment; filename="results.csv"`.
 - **Columns:** `project_id,project_title,track,submitted_at,review_count`
 - **Implementation:** Iterates over all projects in the event, annotates `review_count` via `Count('scores')`, escapes special characters (commas, quotes) according to RFC 4180 via Python standard library `csv.writer`, and flushes as an HTTP response.
+
+### 3.3 Bulk JSON Export Pipeline (`/api/export/bulk/`)
+- **Access Rule:** Requires role `organizer` or `admin` (401 unauthenticated, 403 unauthorized).
+- **Scope:** Complete domain snapshot including `Event`, `Track`, `Team`, safe `TeamMembership` metadata (usernames and profile roles), and `Project`. Includes stable `id` and `external_id` for deterministic reconciliation.
+- **Absolute Secret Exclusion Filter:** Recursive security sanitizer verifies that zero password hashes, session keys, CSRF tokens, `VotingToken.token` strings, or Ed25519 private keys exist in the exported payload.
+
+### 3.4 Bulk JSON Import Engine (`/api/import/bulk/`)
+- **Access Rule:** Requires role `organizer` or `admin` (401 unauthenticated, 403 unauthorized).
+- **Pre-Validation:** Whole-payload inspection validates entity structure, required fields, datetime parsing, URL syntax, relational references, and duplicate `external_id` instances before initiating any database writes.
+- **Dry-Run Simulation (`?dry_run=true`):** Simulates entity creation and updates, returning a prospective delta summary (`created`, `updated`, `skipped`, `errors`) with zero database writes.
+- **Atomic Transactions:** Real import executions run within `transaction.atomic()`, enforcing all-or-nothing integrity. If any entity fails validation or constraints, the entire batch rolls back.
+- **External ID Reconciliation:** Updates existing records matching `external_id`, creates missing records, and prevents duplicate or cross-event mismatches.
+
+### 3.5 OpenAPI 3.x Specification (`/api/schema/`, `/api/openapi.json`)
+- **Access Rule:** Public (`AllowAny`).
+- **Specification:** Serves comprehensive OpenAPI 3.0.3 documentation covering all real endpoints across `accounts`, `teams`, `projects`, `judging`, `voting`, `audit`, and `t4`.

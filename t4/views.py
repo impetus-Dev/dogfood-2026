@@ -1,4 +1,7 @@
 import base64
+import json
+import os
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -6,6 +9,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from t4.bulk_services import export_bulk_data, import_bulk_data
 from t4.models import Certificate, JudgeRecord
 from t4.permissions import IsOrganizerOrAdmin
 from t4.serializers import (
@@ -175,6 +179,93 @@ class VerifyJudgeRecordView(APIView):
                 "public_key": pub_key_b64,
                 "payload": record.payload,
                 "signature": sig_b64,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class BulkExportView(APIView):
+    """
+    GET /api/export/bulk/ or /api/t4/export/
+    Restricted to organizer and admin roles.
+    Returns sanitized JSON payload with zero leaked secrets.
+    """
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Unauthorized", "detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        role = getattr(getattr(request.user, "profile", None), "role", None)
+        if role not in ["organizer", "admin"]:
+            return Response(
+                {"error": "Forbidden", "detail": "Access restricted to organizers and admins."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        event_id = request.query_params.get("event_id")
+        parsed_event_id = int(event_id) if event_id and str(event_id).isdigit() else None
+        data = export_bulk_data(event_id=parsed_event_id)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class BulkImportView(APIView):
+    """
+    POST /api/import/bulk/ or /api/t4/import/
+    Restricted to organizer and admin roles.
+    Supports dry-run simulation and atomic execution.
+    """
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Unauthorized", "detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        role = getattr(getattr(request.user, "profile", None), "role", None)
+        if role not in ["organizer", "admin"]:
+            return Response(
+                {"error": "Forbidden", "detail": "Access restricted to organizers and admins."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        dry_run_param = request.query_params.get("dry_run", "")
+        dry_run = dry_run_param.lower() in ("true", "1") or bool(request.data.get("dry_run", False))
+        payload = request.data
+        result = import_bulk_data(payload, dry_run=dry_run)
+        status_code = status.HTTP_200_OK if not result.get("errors") else status.HTTP_400_BAD_REQUEST
+        return Response(result, status=status_code)
+
+
+class OpenAPISchemaView(APIView):
+    """
+    GET /api/schema/ or /api/openapi.json
+    Public endpoint returning OpenAPI 3.0.3 specification JSON.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        schema_path = getattr(settings, "BASE_DIR", None)
+        if schema_path:
+            schema_file = os.path.join(schema_path, "openapi.json")
+            if os.path.exists(schema_file):
+                with open(schema_file, "r", encoding="utf-8") as f:
+                    return Response(json.load(f), status=status.HTTP_200_OK)
+
+        # Fallback minimal schema if file not on disk
+        return Response(
+            {
+                "openapi": "3.0.3",
+                "info": {"title": "DOGFOOD 2026 API", "version": "1.0.0"},
+                "paths": {},
             },
             status=status.HTTP_200_OK,
         )
