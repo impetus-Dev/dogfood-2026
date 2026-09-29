@@ -159,6 +159,16 @@ def results_view(request, event_id):
     if voting_closed:
         results = get_results(event)
         total_votes = sum(item["votes"] for item in results)
+        project_ids = [item["id"] for item in results]
+        projects_by_id = {
+            p.id: p
+            for p in Project.objects.filter(id__in=project_ids).select_related("team", "track")
+        }
+        for item in results:
+            proj = projects_by_id.get(item["id"])
+            if proj:
+                item["team_name"] = proj.team.name if proj.team else ""
+                item["track_name"] = proj.track.name if proj.track else ""
 
     return render(
         request,

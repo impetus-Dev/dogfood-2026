@@ -1,71 +1,68 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit {{ project.title }} — DOGFOOD 2026</title>
-    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-</head>
-<body class="bg-light py-5">
-    <div class="container" style="max-width: 650px;">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h2 class="card-title mb-4">Edit Project Draft</h2>
 
-                <div class="mb-3">
-                    <small class="text-muted d-block">Team</small>
-                    <strong>{{ project.team.name }}</strong> ({{ project.team.event.name }})
+{% block title %}Edit {{ project.title }} — DOGFOOD 2026{% endblock %}
+{% block page_title %}Edit Project{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+    <div class="df-card p-4 p-md-5" style="max-width: 720px; width: 100%;">
+        <div class="df-card-header mb-4">
+            <div>
+                <span class="badge-role badge-role-participant mb-2">PROJECT DRAFT</span>
+                <h2 class="h3 fw-bold text-white mb-1" style="letter-spacing: -0.5px;">Edit Project</h2>
+                <div class="text-secondary small">
+                    Team: <strong class="text-white">{{ project.team.name }}</strong> ({{ project.team.event.name }})
                 </div>
-
-                {% if form.errors %}
-                <div class="alert alert-danger" role="alert">
-                    <ul class="mb-0">
-                        {% for field, errors in form.errors.items %}
-                            {% for error in errors %}
-                            <li><strong>{{ field }}:</strong> {{ error }}</li>
-                            {% endfor %}
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-
-                <form method="post" action="{% url 'projects:edit' project.id %}">
-                    {% csrf_token %}
-
-                    <div class="mb-3">
-                        <label for="id_track" class="form-label">Track</label>
-                        <select class="form-select" id="id_track" name="track" required>
-                            {% for track in form.fields.track.queryset %}
-                            <option value="{{ track.id }}" {% if form.track.value|stringformat:"s" == track.id|stringformat:"s" or project.track_id == track.id %}selected{% endif %}>
-                                {{ track.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="id_title" class="form-label">Project Title</label>
-                        <input type="text" class="form-control" id="id_title" name="title" value="{{ form.title.value|default:project.title }}" required maxlength="255">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="id_summary" class="form-label">Summary</label>
-                        <textarea class="form-control" id="id_summary" name="summary" rows="4" required>{{ form.summary.value|default:project.summary }}</textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="id_repo_url" class="form-label">Repository URL</label>
-                        <input type="url" class="form-control" id="id_repo_url" name="repo_url" value="{{ form.repo_url.value|default:project.repo_url }}" required>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <a href="{% url 'projects:detail' project.id %}" class="btn btn-outline-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary" id="btn-save-project">Save Changes</button>
-                    </div>
-                </form>
             </div>
         </div>
+
+        {% if form.errors %}
+        <div class="df-alert df-alert-danger mb-4" role="alert">
+            <ul class="mb-0 ps-3">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                    <li><strong>{{ field }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'projects:edit' project.id %}">
+            {% csrf_token %}
+
+            <div class="df-form-group mb-3">
+                <label for="id_track" class="df-label">Track <span class="text-danger">*</span></label>
+                <select class="df-select" id="id_track" name="track" required>
+                    {% for track in form.fields.track.queryset %}
+                    <option value="{{ track.id }}" {% if form.track.value|stringformat:"s" == track.id|stringformat:"s" or project.track_id == track.id %}selected{% endif %}>
+                        {{ track.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="df-form-group mb-3">
+                <label for="id_title" class="df-label">Project Title <span class="text-danger">*</span></label>
+                <input type="text" class="df-input" id="id_title" name="title" value="{{ form.title.value|default:project.title }}" required maxlength="255">
+            </div>
+
+            <div class="df-form-group mb-3">
+                <label for="id_summary" class="df-label">Summary / Description <span class="text-danger">*</span></label>
+                <textarea class="df-textarea" id="id_summary" name="summary" rows="4" required>{{ form.summary.value|default:project.summary }}</textarea>
+            </div>
+
+            <div class="df-form-group mb-4">
+                <label for="id_repo_url" class="df-label">Repository URL <span class="text-danger">*</span></label>
+                <input type="url" class="df-input" id="id_repo_url" name="repo_url" value="{{ form.repo_url.value|default:project.repo_url }}" required>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color: var(--df-border-subtle) !important;">
+                <a href="{% url 'projects:detail' project.id %}" class="btn-df-glass btn-sm">Cancel</a>
+                <button type="submit" class="btn-df-primary btn-sm" id="btn-save-project">Save Changes</button>
+            </div>
+        </form>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

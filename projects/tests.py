@@ -408,6 +408,72 @@ class ProjectEditAndSubmitTest(TestCase):
         self.assertEqual(self.project_closed.status, "draft")
         self.assertIsNone(self.project_closed.submitted_at)
 
+    def test_submit_confirmation_page_loads_for_authorized_member(self):
+        """GET /projects/<pk>/submit/ loads confirmation page with real deadline and status."""
+        self.client.force_login(self.member)
+        response = self.client.get(reverse("projects:submit", args=[self.project_open.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project_open.title)
+        self.assertContains(response, "Submit Project")
+        self.assertContains(response, "Draft")
+        self.assertContains(response, "btn-confirm-submit")
+        self.assertNotContains(response, self.team_open.invite_code)
+
+    def test_submit_confirmation_page_access_control(self):
+        """GET /projects/<pk>/submit/ enforces auth, team membership, draft status, and deadline."""
+        url_open = reverse("projects:submit", args=[self.project_open.id])
+        # Anonymous -> 302 login
+        anon_resp = self.client.get(url_open)
+        self.assertEqual(anon_resp.status_code, 302)
+
+        # Outsider -> 403
+        self.client.force_login(self.outsider)
+        outsider_resp = self.client.get(url_open)
+        self.assertEqual(outsider_resp.status_code, 403)
+
+        # Closed event -> 400
+        self.client.force_login(self.member)
+        closed_resp = self.client.get(reverse("projects:submit", args=[self.project_closed.id]))
+        self.assertEqual(closed_resp.status_code, 400)
+
+    def test_project_detail_view_permissions_and_security(self):
+        """Project detail renders real data, actions according to role, and never leaks sensitive data."""
+        detail_url = reverse("projects:detail", args=[self.project_open.id])
+
+        # Anonymous view
+        anon_resp = self.client.get(detail_url)
+        self.assertEqual(anon_resp.status_code, 200)
+        self.assertContains(anon_resp, "Active Draft")
+        self.assertContains(anon_resp, "Dev Team")
+        self.assertContains(anon_resp, "AI / ML")
+        self.assertNotContains(anon_resp, "btn-edit-project")
+        self.assertNotContains(anon_resp, "btn-submit-project")
+        self.assertNotContains(anon_resp, self.team_open.invite_code)
+
+        # Team member view sees edit & submit actions
+        self.client.force_login(self.member)
+        member_resp = self.client.get(detail_url)
+        self.assertEqual(member_resp.status_code, 200)
+        self.assertContains(member_resp, "btn-edit-project")
+        self.assertContains(member_resp, "btn-submit-project")
+        self.assertNotContains(member_resp, self.team_open.invite_code)
+
+    def test_create_and_edit_forms_do_not_expose_invite_codes(self):
+        """Create and edit forms load correctly and do not expose team invite codes."""
+        self.client.force_login(self.member)
+        # Create form
+        create_resp = self.client.get(reverse("projects:create"))
+        self.assertEqual(create_resp.status_code, 200)
+        self.assertContains(create_resp, "Create Project Draft")
+        self.assertNotContains(create_resp, self.team_open.invite_code)
+
+        # Edit form
+        edit_resp = self.client.get(reverse("projects:edit", args=[self.project_open.id]))
+        self.assertEqual(edit_resp.status_code, 200)
+        self.assertContains(edit_resp, "Edit Project")
+        self.assertNotContains(edit_resp, self.team_open.invite_code)
+
+
 
 class ProjectGalleryTest(TestCase):
     """Tests for the public project gallery, search, and filtering."""

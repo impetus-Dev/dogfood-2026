@@ -1,22 +1,74 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — DOGFOOD 2026</title>
+    <title>Sign In — DOGFOOD 2026</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dogfood.css' %}">
 </head>
-<body>
-    <h1>DOGFOOD 2026 — Login</h1>
-    {% if error %}
-    <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        <label for="username">Username:</label><br>
-        <input type="text" id="username" name="username" required><br>
-        <label for="password">Password:</label><br>
-        <input type="password" id="password" name="password" required><br><br>
-        <button type="submit">Login</button>
-    </form>
+<body class="d-flex align-items-center justify-content-center min-vh-100 p-3" style="position: relative;">
+    <!-- 3D Environment Background -->
+    <div class="dogfood-bg" aria-hidden="true">
+        <div class="dogfood-grid-plane"></div>
+        <div class="dogfood-orb dogfood-orb-1"></div>
+        <div class="dogfood-orb dogfood-orb-2"></div>
+    </div>
+
+    <!-- Centered Glass Login Panel -->
+    <div class="w-100" style="max-width: 440px; z-index: 10;">
+        <div class="df-card df-card-glow-pink p-4 p-sm-5" style="background: rgba(12, 17, 30, 0.85); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px -5px rgba(0, 240, 255, 0.15);">
+            <!-- Brand Header -->
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, var(--df-pink) 0%, #99052b 100%); box-shadow: 0 0 24px -2px var(--df-pink-glow); color: #fff; font-size: 1.4rem; font-weight: 800;">
+                    DF
+                </div>
+                <h1 class="h3 fw-bold mb-1" style="color: var(--df-text-main); letter-spacing: -0.5px;">
+                    DOGFOOD <span style="color: var(--df-cyan);">2026</span>
+                </h1>
+                <p class="small text-uppercase mb-2" style="letter-spacing: 1.2px; color: var(--df-cyan); font-weight: 600;">
+                    Hackathon Platform
+                </p>
+                <p class="small mb-0" style="color: var(--df-text-muted); font-style: italic;">
+                    "Build the platform that will judge you."
+                </p>
+            </div>
+
+            <!-- Error Banner -->
+            {% if error %}
+            <div class="df-alert df-alert-danger mb-4" role="alert">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <div class="df-form-group mb-3">
+                    <label for="username" class="df-label">Username</label>
+                    <input type="text" id="username" name="username" class="df-input" required autofocus autocomplete="username" placeholder="e.g. organizer, judge_a, participant">
+                </div>
+
+                <div class="df-form-group mb-4">
+                    <label for="password" class="df-label">Password</label>
+                    <input type="password" id="password" name="password" class="df-input" required autocomplete="current-password" placeholder="Enter password">
+                </div>
+
+                <button type="submit" class="btn-df-primary w-100 py-2 justify-content-center">
+                    <span>Sign In</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </form>
+
+            <!-- Bottom Context Links -->
+            <div class="text-center mt-4 pt-3" style="border-top: 1px solid var(--df-border-subtle);">
+                <a href="{% url 'projects:gallery' %}" class="small" style="color: var(--df-text-muted); text-decoration: none; transition: color 0.15s ease;">
+                    Browse Public Project Gallery →
+                </a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
