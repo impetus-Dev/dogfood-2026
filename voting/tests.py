@@ -7,12 +7,13 @@ Phase 1 model tests are preserved at the end of this file.
 import hashlib
 import random
 import threading
+import unittest
 import unittest.mock
 from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, connections, transaction
+from django.db import IntegrityError, connection, connections, transaction
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -400,6 +401,7 @@ class ConcurrencyTests(TransactionTestCase):
     """
 
     # 21. Two workers POST with the SAME token for two DIFFERENT projects.
+    @unittest.skipIf(connection.vendor == "sqlite", "SQLite file locking serializes threads; PostgreSQL MVCC required")
     def test_21_concurrent_link_votes_different_projects(self):
         ITERATIONS = 5
         for i in range(ITERATIONS):
@@ -443,6 +445,7 @@ class ConcurrencyTests(TransactionTestCase):
             self.assertIsNotNone(token.used_at)
 
     # 22. Two workers POST as the SAME authenticated user for the SAME project.
+    @unittest.skipIf(connection.vendor == "sqlite", "SQLite file locking serializes threads; PostgreSQL MVCC required")
     def test_22_concurrent_auth_votes_same_project(self):
         ITERATIONS = 5
         for i in range(ITERATIONS):
