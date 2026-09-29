@@ -227,3 +227,17 @@ class LoginAndRoleAwareDashboardTest(TestCase):
         self.assertNotContains(response, "Control Center")
         self.assertNotContains(response, "Judge A private feedback")
         self.assertNotContains(response, "Judge B confidential review")
+
+    def test_participant_dashboard_does_not_expose_team_invite_code(self):
+        """Security regression: participant dashboard must never expose team invite code."""
+        self.client.force_login(self.participant)
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+
+        # SECURITY ASSERTION: Team invite code must not be exposed anywhere in HTML response
+        self.assertNotContains(response, self.team.invite_code)
+
+        # Legitimate participant content remains visible
+        self.assertContains(response, self.team.name)
+        self.assertContains(response, self.project.title)
+        self.assertContains(response, "Participant Workspace")
