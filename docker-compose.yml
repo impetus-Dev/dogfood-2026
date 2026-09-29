@@ -23,6 +23,9 @@ services:
     environment:
       DATABASE_URL: postgres://dogfood:dogfood_dev_only@db:5432/dogfood
     command: ["./entrypoint.sh"]
+    volumes:
+      - t4_keys:/keys
 
 volumes:
   pgdata:
+  t4_keys:
