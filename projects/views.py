@@ -323,19 +323,12 @@ def project_submit(request, pk):
     Submit a draft project.
     Enforces team membership, draft status, and SERVER-SIDE SUBMISSION DEADLINE.
     Transition is executed atomically.
+    Supports GET confirmation UI and POST submission.
     """
     if not request.user.is_authenticated:
         if _is_json_request(request):
             return JsonResponse({"error": "Authentication required."}, status=401)
         return redirect(f"{reverse('login')}?next={request.path}")
-
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    if request.content_type != "application/json":
-        csrf_err = CsrfViewMiddleware(lambda r: None).process_view(request, None, (), {})
-        if csrf_err:
-            return csrf_err
 
     project = get_object_or_404(
         Project.objects.select_related("team", "team__event"),
@@ -359,22 +352,41 @@ def project_submit(request, pk):
             return JsonResponse({"error": "Submission deadline has passed."}, status=400)
         return HttpResponseBadRequest("Submission deadline has passed.")
 
-    with transaction.atomic():
-        project.status = "submitted"
-        project.submitted_at = timezone.now()
-        project.save(update_fields=["status", "submitted_at"])
-
-    if _is_json_request(request):
-        return JsonResponse(
+    if request.method == "GET":
+        return render(
+            request,
+            "projects/submit.html",
             {
-                "id": project.id,
-                "title": project.title,
-                "status": project.status,
-                "submitted_at": project.submitted_at,
-            }
+                "project": project,
+                "team": project.team,
+                "event": event,
+            },
         )
 
-    return redirect("projects:detail", pk=project.pk)
+    if request.method == "POST":
+        if request.content_type != "application/json":
+            csrf_err = CsrfViewMiddleware(lambda r: None).process_view(request, None, (), {})
+            if csrf_err:
+                return csrf_err
+
+        with transaction.atomic():
+            project.status = "submitted"
+            project.submitted_at = timezone.now()
+            project.save(update_fields=["status", "submitted_at"])
+
+        if _is_json_request(request):
+            return JsonResponse(
+                {
+                    "id": project.id,
+                    "title": project.title,
+                    "status": project.status,
+                    "submitted_at": project.submitted_at,
+                }
+            )
+
+        return redirect("projects:detail", pk=project.pk)
+
+    return HttpResponseNotAllowed(["GET", "POST"])
 
 
 project_submit.csrf_exempt = True
