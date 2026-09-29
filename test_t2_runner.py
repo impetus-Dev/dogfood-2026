@@ -3,7 +3,7 @@ import sys
 import math
 import csv
 from io import StringIO
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import django
 from django.conf import settings
@@ -23,6 +23,7 @@ if not settings.configured:
             "django.contrib.contenttypes",
             "accounts",
             "events",
+            "teams",
             "projects",
             "judging",
         ],
@@ -39,6 +40,7 @@ from django.urls import resolve, reverse
 
 from accounts.models import Profile
 from events.models import Event, Track
+from teams.models import Team
 from projects.models import Project
 from judging.models import RubricCriterion, JudgeAssignment, Score
 from judging.normalization import normalize_scores, compute_raw_score, RankedProjects
@@ -71,8 +73,14 @@ class T2TestCase(TestCase):
         Profile.objects.create(user=self.u_admin, role="admin")
 
         # Event & Tracks
-        self.event = Event.objects.create(name="Dogfood Hackathon 2026")
+        now = datetime(2026, 9, 26, 12, 0, 0, tzinfo=timezone.utc)
+        self.event = Event.objects.create(
+            name="Dogfood Hackathon 2026",
+            submissions_close=now + timedelta(days=1),
+            voting_close=now + timedelta(days=2),
+        )
         self.track = Track.objects.create(event=self.event, name="Web3 & Infra")
+        self.team = Team.objects.create(event=self.event, name="Test Team")
 
         # Rubric criteria
         self.crit_tech = RubricCriterion.objects.create(event=self.event, name="technical", weight=1.0)
@@ -80,18 +88,27 @@ class T2TestCase(TestCase):
 
         # Projects
         self.proj_a = Project.objects.create(
+            team=self.team,
             title="Project A",
+            summary="Summary A",
             track=self.track,
+            repo_url="https://github.com/example/a",
             submitted_at=datetime(2026, 9, 26, 12, 0, 0, tzinfo=timezone.utc),
         )
         self.proj_b = Project.objects.create(
+            team=self.team,
             title="Project B",
+            summary="Summary B",
             track=self.track,
+            repo_url="https://github.com/example/b",
             submitted_at=datetime(2026, 9, 26, 13, 0, 0, tzinfo=timezone.utc),
         )
         self.proj_c = Project.objects.create(
+            team=self.team,
             title="Project C",
+            summary="Summary C",
             track=self.track,
+            repo_url="https://github.com/example/c",
             submitted_at=datetime(2026, 9, 26, 14, 0, 0, tzinfo=timezone.utc),
         )
 
@@ -374,7 +391,12 @@ class T2TestCase(TestCase):
         - as_dict and as_mapping flags
         - dictionary access on RankedProjects
         """
-        empty_event = Event.objects.create(name="Empty Event")
+        now = datetime(2026, 9, 26, 12, 0, 0, tzinfo=timezone.utc)
+        empty_event = Event.objects.create(
+            name="Empty Event",
+            submissions_close=now + timedelta(days=1),
+            voting_close=now + timedelta(days=2),
+        )
         res_empty = normalize_scores(empty_event)
         self.assertEqual(len(res_empty), 0)
         self.assertEqual(res_empty.to_dict(), {})
@@ -421,8 +443,11 @@ class T2TestCase(TestCase):
         Project.objects.all().delete()
 
         proj_special = Project.objects.create(
+            team=self.team,
             title="AI, ML & Blockchain: A New Era",
+            summary="Special summary",
             track=self.track,
+            repo_url="https://github.com/example/special",
         )
 
         view = ExportCSVView.as_view()
@@ -442,14 +467,6 @@ class T2TestCase(TestCase):
 
 
 if __name__ == "__main__":
-    from django.db import connection
-    tables = [Profile, Event, Track, Project, RubricCriterion, JudgeAssignment, Score]
-    with connection.schema_editor() as schema_editor:
-        for model in tables:
-            try:
-                schema_editor.create_model(model)
-            except Exception:
-                pass
     call_command("migrate", verbosity=0)
     import unittest
     suite = unittest.TestLoader().loadTestsFromTestCase(T2TestCase)

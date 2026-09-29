@@ -85,6 +85,9 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+if 'sqlite' in DATABASES['default'].get('ENGINE', ''):
+    DATABASES['default'].setdefault('OPTIONS', {})['timeout'] = 30
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
