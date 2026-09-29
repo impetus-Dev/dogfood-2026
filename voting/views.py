@@ -14,8 +14,9 @@ from rest_framework.views import APIView
 
 from events.models import Event
 from projects.models import Project
-from voting.models import Vote, VotingToken
-from voting.serializers import VoteInputSerializer
+from voting.models import Vote, VotingToken, Comment
+from voting.serializers import VoteInputSerializer, CommentSerializer
+from audit.services import log_audit
 from voting.throttles import (
     AuthenticatedUserThrottle,
     AuthUserThrottle,
@@ -110,6 +111,17 @@ class AuthenticatedVoteView(APIView):
         except (ValidationError, IntegrityError):
             # ValidationError from full_clean() or IntegrityError from race
             if Vote.objects.filter(project=project, voter=request.user).exists():
+                log_audit(
+                    actor=f"user:{request.user.pk}",
+                    action="VOTE_DUPLICATE_BLOCKED",
+                    target=f"project:{project.pk}",
+                    metadata={
+                        "mode": "authenticated",
+                        "event_id": event.pk,
+                        "project_id": project.pk,
+                        "reason": "duplicate_user_vote",
+                    },
+                )
                 return Response(
                     {"detail": "You have already voted for this project."},
                     status=status.HTTP_409_CONFLICT,
@@ -218,6 +230,17 @@ class LinkVoteView(APIView):
         except (ValidationError, IntegrityError):
             # Race condition: check what failed
             if Vote.objects.filter(voting_token=token_obj).exists() or VotingToken.objects.filter(pk=token_obj.pk, used_at__isnull=False).exists():
+                log_audit(
+                    actor="link",
+                    action="VOTE_DUPLICATE_BLOCKED",
+                    target=f"event:{event.pk}",
+                    metadata={
+                        "mode": "link",
+                        "event_id": event.pk,
+                        "project_id": project.pk,
+                        "reason": "token_already_used",
+                    },
+                )
                 return Response(
                     {"detail": "This voting token has already been used."},
                     status=status.HTTP_409_CONFLICT,
@@ -350,6 +373,16 @@ class ResultsView(APIView):
         try:
             projects = get_results(event)
         except VotingClosedError:
+            actor = f"user:{request.user.pk}" if request.user and request.user.is_authenticated else "anonymous"
+            log_audit(
+                actor=actor,
+                action="RESULTS_ACCESS_DENIED",
+                target=f"event:{event.pk}",
+                metadata={
+                    "event_id": event.pk,
+                    "reason": "voting_not_closed",
+                },
+            )
             return Response(
                 {"detail": "Results are hidden until voting closes."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -362,3 +395,58 @@ class ResultsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class ProjectCommentListCreateView(APIView):
+    """
+    GET  /api/projects/<project_id>/comments/
+    POST /api/projects/<project_id>/comments/
+
+    Public comment endpoint.
+    GET returns approved comments for submitted projects in chronological order.
+    POST creates a new comment with validated author_name and text.
+    """
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def get_project(self, project_id):
+        try:
+            return Project.objects.get(pk=project_id)
+        except Project.DoesNotExist:
+            return None
+
+    def get(self, request, project_id):
+        project = self.get_project(project_id)
+        if not project or project.status != "submitted":
+            return Response(
+                {"detail": "Project not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        comments = project.comments.all().order_by("created_at", "id")
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, project_id):
+        project = self.get_project(project_id)
+        if not project:
+            return Response(
+                {"detail": "Project not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if project.status != "submitted":
+            return Response(
+                {"detail": "Comments cannot be added to draft projects."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
+        if request.user and request.user.is_authenticated and not data.get("author_name"):
+            data["author_name"] = request.user.username
+
+        serializer = CommentSerializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = serializer.save(project=project)
+        return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
