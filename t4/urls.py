@@ -1,5 +1,6 @@
 from django.urls import path
 
+from t4.embed_views import embed_gallery_view, embed_script_view
 from t4.views import (
     BulkExportView,
     BulkImportView,
@@ -12,6 +13,9 @@ from t4.views import (
 )
 
 urlpatterns = [
+    path("embed/gallery.js", embed_script_view, name="embed_gallery_js"),
+    path("embed/gallery/<str:event_id>/", embed_gallery_view, name="embed_gallery"),
+    path("embed/gallery/<str:event_id>", embed_gallery_view),
     path("api/t4/keys/public/", PublicKeyView.as_view(), name="t4_public_key"),
     path("api/t4/judge-records/", JudgeRecordCreateView.as_view(), name="t4_judge_records"),
     path("api/t4/certificates/", CertificateCreateView.as_view(), name="t4_certificates"),

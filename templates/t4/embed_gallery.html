@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ event.name }} — Project Gallery Widget</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+        }
+        .widget-header {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .project-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .project-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+        .summary-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        .widget-footer {
+            margin-top: 24px;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid px-0">
+        <!-- Header -->
+        <div class="widget-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h1 class="h4 mb-0 fw-bold text-dark">{{ event.name }}</h1>
+                <small class="text-muted">Public Showcase &bull; {{ total_count }} Project{{ total_count|pluralize }}</small>
+            </div>
+            <div>
+                <span class="badge bg-primary px-3 py-2">Live Gallery</span>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="card mb-3 border-0 bg-white shadow-sm">
+            <div class="card-body p-2">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-sm-7">
+                        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Search projects...">
+                    </div>
+                    <div class="col-sm-3">
+                        <select name="track" class="form-select form-select-sm">
+                            <option value="">All Tracks</option>
+                            {% for track in tracks %}
+                            <option value="{{ track.id }}" {% if selected_track_id == track.id %}selected{% endif %}>
+                                {{ track.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-2 d-flex gap-1">
+                        <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                        {% if q or selected_track_id %}
+                        <a href="?" class="btn btn-sm btn-outline-secondary">Reset</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Projects Grid -->
+        {% if projects %}
+        <div class="row g-3" id="widget-project-list">
+            {% for project in projects %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card project-card h-100 p-3 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <h2 class="h6 fw-bold mb-0 text-truncate" title="{{ project.title }}">
+                                <a href="/projects/{{ project.id }}/" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark project-widget-link">
+                                    {{ project.title }}
+                                </a>
+                            </h2>
+                            {% if project.is_submitted %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle flex-shrink-0">Submitted</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border flex-shrink-0">Draft</span>
+                            {% endif %}
+                        </div>
+
+                        {% if project.track_name %}
+                        <div class="mb-2">
+                            <span class="badge bg-info-subtle text-dark border border-info-subtle">{{ project.track_name }}</span>
+                            {% if project.team_name %}
+                            <small class="text-muted ms-1">&bull; Team: {{ project.team_name }}</small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <p class="summary-text mb-3">{{ project.summary|default:"No description provided." }}</p>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        {% if project.repo_url %}
+                        <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;">
+                            GitHub &nearr;
+                        </a>
+                        {% else %}
+                        <span></span>
+                        {% endif %}
+
+                        <a href="/projects/{{ project.id }}/" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.8rem;">
+                            Details &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 bg-white rounded border">
+            <p class="text-muted mb-0">No projects match the criteria.</p>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="widget-footer d-flex justify-content-between align-items-center">
+            <span>Powered by <strong>DOGFOOD 2026</strong> Hackathon Platform</span>
+            <span><a href="/projects" target="_blank" rel="noopener noreferrer" class="text-muted text-decoration-none">Full Gallery &nearr;</a></span>
+        </div>
+    </div>
+</body>
+</html>

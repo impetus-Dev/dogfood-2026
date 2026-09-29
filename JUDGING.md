@@ -1,4 +1,4 @@
-# DOGFOOD 2026 Judging Engine & Normalization Specification
+# DOGFOOD 2026 Judging & Voting Engine Specification
 
 ## 1. Judging Workflows & Assignments
 
@@ -40,7 +40,7 @@ The platform enforces strict role boundaries in `judging/views.py`:
 
 ### 2.1 Implementation Details
 ```python
-# judging/views.py (snippet)
+# judging/views.py
 if not request.user.is_authenticated:
     return Response({"detail": "Authentication credentials were not provided."}, status=401)
 
@@ -68,7 +68,7 @@ $$R_{j,p} = \sum_{c \in C} w_c \cdot s_{j,p,c}$$
 Where:
 - $c \in C$ represents each rubric criterion.
 - $w_c$ is the configured criterion weight (defaults to $1.0$ if unweighted).
-- $s_{j,p,c}$ is the integer or floating-point score awarded by judge $j$.
+- $s_{j,p,c}$ is the score awarded by judge $j$.
 
 ### 3.2 Judge Distribution Parameters
 For a judge $j$ who has scored a set of projects $P_j$:
@@ -86,7 +86,7 @@ A critical numerical instability occurs when:
 **Zero-Variance Safety Rule:**
 $$\sigma_j^* = \begin{cases} 1.0 & \text{if } \sigma_j < 10^{-4} \\ \sigma_j & \text{otherwise} \end{cases}$$
 
-This guarantees that:
+This guarantees:
 - Division by zero (`ZeroDivisionError`) is mathematically impossible.
 - Judges who assign identical scores produce a normalized shift of $0.0$ ($R_{j,p} - \mu_j = 0$).
 
@@ -101,33 +101,61 @@ The final aggregate normalized score $S_p$ for project $p$ averaged across all e
 
 $$S_p = \frac{1}{|J_p|} \sum_{j \in J_p} Z_{j,p}$$
 
-Projects with zero reviews default to $S_p = 0.0$.
+---
 
-### 3.5 Deterministic Ranking & Tie Breaking
-Ranked outputs are ordered by:
-1. $S_p$ descending (higher normalized score wins).
-2. `submitted_at` ascending (earlier submissions break score ties).
-3. `project.id` ascending (guarantees strictly deterministic output).
+## 4. Community Voting Engine (T3)
+
+In addition to official judging, the platform features a community voting engine for popular choice awards.
+
+### 4.1 Dual Voting Mechanisms
+1. **Authenticated Session Voting (`POST /api/vote/`)**:
+   - Requires an authenticated user session (`request.user`).
+   - Each user can cast exactly 1 vote per project, and is restricted by event configuration.
+2. **Link / Token Voting (`POST /api/vote/link/<token>/`)**:
+   - Single-use, cryptographically generated voting tokens (`VotingToken`).
+   - Enables anonymous community or guest voting without requiring an account.
+   - Enforces immediate consumption: `token.used_at = timezone.now()` within an atomic row lock.
+
+### 4.2 Seeded Ballot Ordering (Anti-Position Bias)
+To prevent the first or top projects from gaining an unfair advantage (position bias), the ballot ordering is deterministically seeded per voter:
+- **Seed Formula**:
+  $$\text{Seed} = \text{SHA-256}(\text{Voter Identity} + \text{Event ID})$$
+- The projects list is deterministically sorted using this pseudo-random seed in Python.
+- Every voter sees a consistent, reproducible, yet individualized ballot order across page refreshes.
+
+### 4.3 Results Hiding & Active Window Enforcement
+- Prior to `event.voting_close`, the results endpoint (`GET /api/results/<event_id>/`) returns:
+  ```json
+  {
+    "detail": "Voting is still active. Results are hidden until voting closes.",
+    "results_hidden": true
+  }
+  ```
+  HTTP Status: `403 Forbidden`.
+- The frontend results template strictly hides all tally tables and stats before close.
+- Once `timezone.now() >= event.voting_close`, results are dynamically calculated from the database and returned with complete vote counts and leaderboard rankings.
+
+### 4.4 Rate Limiting & Audit Trail
+- Voting endpoints apply in-memory cache rate limiting per IP / voter identity to mitigate denial-of-service and automated vote-stuffing.
+- Every vote cast, duplicate attempt, or validation failure is recorded in `AuditEvent` with IP address, timestamp, and metadata.
 
 ---
 
-## 4. CSV Export Pipeline Specification
+## 5. Cryptographic Attestation & Offline Verification (T4)
 
-The export route `/api/export.csv` provides organizers and auditors with a structured export of hackathon entries.
+Judges' participation and scoring records can be cryptographically attested using standard Ed25519 digital signatures.
 
-### 4.1 Wire Specification
-- **Method:** `GET`
-- **Route:** `/api/export.csv`
-- **Authorization:** `organizer` or `admin` session required.
-- **Headers:**
-  - `Content-Type: text/csv; charset=utf-8`
-  - `Content-Disposition: attachment; filename="results.csv"`
-- **Critical Acceptance Requirement:** The first line (header) MUST contain a comma (`,`).
+### 5.1 Canonical Serialization (RFC 8785)
+To ensure identical hash and signature evaluation across independent implementations:
+1. Payloads are formatted as JSON with strictly sorted keys (`sort_keys=True`).
+2. Delimiters are compact without whitespace (`separators=(',', ':')`).
+3. UTF-8 character encoding is enforced.
 
-### 4.2 Column Schema
-```csv
-project_id,project_title,track,submitted_at,review_count
-1,"Autonomous Drone Router","AI & Robotics",2026-03-01T14:32:00Z,4
-2,"Decentralized Audit Log","Infrastructure",2026-03-01T15:10:15Z,3
-```
-- RFC 4180 escaping is applied automatically for project titles containing commas, quotes, or newlines.
+### 5.2 Verification Interfaces
+1. **Public Key Endpoint**: `GET /api/t4/keys/public/` delivers the active Base64-encoded Ed25519 public key.
+2. **REST Verification**: `GET /api/verify/<record_id>/` evaluates the signature against stored payload using the active key and returns `{"valid": true, "record_id": ..., "algorithm": "Ed25519"}`.
+3. **Offline CLI Verification**:
+   ```bash
+   python manage.py verify_judge_record <record_id>
+   ```
+   Can be run completely disconnected from the network to independently verify tamper resistance.

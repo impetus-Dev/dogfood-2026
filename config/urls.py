@@ -17,4 +17,5 @@ urlpatterns = [
     path('api/', include('audit.urls')),
     path('', include('judging.urls')),
     path('', include('t4.urls')),
+    path('', include('voting.frontend_urls')),
 ]
