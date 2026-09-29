@@ -18,4 +18,5 @@ urlpatterns = [
     path('', include('judging.urls')),
     path('', include('t4.urls')),
     path('', include('voting.frontend_urls')),
+    path('', include('core.urls')),
 ]

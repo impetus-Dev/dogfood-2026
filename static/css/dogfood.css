@@ -1,0 +1,820 @@
+/**
+ * DOGFOOD 2026 — Master Visual Design System
+ * Aesthetic: Futuristic DOGFOOD 2026 + SaaS Shell + Editorial Showcase + Feather Iconography
+ * No external runtime or CDN dependencies. Fully offline & self-hostable.
+ */
+
+:root {
+  /* Color Palette */
+  --df-bg-base: #060913;
+  --df-bg-deep: #03050a;
+  --df-bg-panel: rgba(14, 20, 34, 0.72);
+  --df-bg-panel-elevated: rgba(20, 29, 48, 0.82);
+  --df-bg-panel-hover: rgba(26, 38, 64, 0.88);
+  --df-bg-input: rgba(10, 15, 26, 0.85);
+
+  /* Borders & Dividers */
+  --df-border: rgba(0, 240, 255, 0.12);
+  --df-border-subtle: rgba(255, 255, 255, 0.08);
+  --df-border-bright: rgba(0, 240, 255, 0.35);
+  --df-border-pink: rgba(255, 42, 95, 0.35);
+
+  /* Primary Brand Lighting (Cyan / Electric Blue) */
+  --df-cyan: #00f0ff;
+  --df-cyan-dim: #00bcd4;
+  --df-cyan-glow: rgba(0, 240, 255, 0.25);
+  --df-cyan-surface: rgba(0, 240, 255, 0.08);
+
+  /* Signature DOGFOOD Accent (Neon Pink / Rose) */
+  --df-pink: #ff2a5f;
+  --df-pink-dim: #e11d48;
+  --df-pink-glow: rgba(255, 42, 95, 0.28);
+  --df-pink-surface: rgba(255, 42, 95, 0.08);
+
+  /* Accent Lights */
+  --df-blue: #3b82f6;
+  --df-emerald: #10b981;
+  --df-amber: #f59e0b;
+  --df-violet: #8b5cf6;
+
+  /* Typography */
+  --df-text-main: #f8fafc;
+  --df-text-secondary: #cbd5e1;
+  --df-text-muted: #8292ab;
+  --df-text-dim: #54647c;
+
+  /* Elevation Shadows */
+  --df-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  --df-shadow-cyan: 0 0 24px -4px rgba(0, 240, 255, 0.35);
+  --df-shadow-pink: 0 0 24px -4px rgba(255, 42, 95, 0.35);
+  --df-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Shell Layout Dimensions */
+  --df-sidebar-width: 260px;
+  --df-topbar-height: 64px;
+}
+
+/* Base Document Reset for Futuristic Shell */
+html, body {
+  background-color: var(--df-bg-base);
+  color: var(--df-text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   3D ENVIRONMENT BACKGROUND
+   ========================================================================== */
+.dogfood-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -10;
+  pointer-events: none;
+  background-color: var(--df-bg-deep);
+  overflow: hidden;
+}
+
+/* Layer 1: Radial Lighting Accents */
+.dogfood-bg::before {
+  content: "";
+  position: absolute;
+  top: -20%;
+  left: 15%;
+  width: 75vw;
+  height: 70vh;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, rgba(59, 130, 246, 0.04) 40%, transparent 70%);
+  filter: blur(60px);
+}
+
+.dogfood-bg::after {
+  content: "";
+  position: absolute;
+  bottom: -15%;
+  right: 5%;
+  width: 60vw;
+  height: 60vh;
+  background: radial-gradient(circle, rgba(255, 42, 95, 0.06) 0%, rgba(139, 92, 246, 0.03) 50%, transparent 75%);
+  filter: blur(70px);
+}
+
+/* Layer 2: 3D Perspective Grid Floor */
+.dogfood-grid-plane {
+  position: absolute;
+  bottom: -30%;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background-image: 
+    linear-gradient(to right, rgba(0, 240, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: perspective(600px) rotateX(65deg);
+  transform-origin: center bottom;
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 70%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 70%);
+}
+
+/* Layer 3: Subtle floating luminous geometric particles */
+.dogfood-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(35px);
+  opacity: 0.45;
+  animation: floatOrb 18s ease-in-out infinite alternate;
+}
+.dogfood-orb-1 {
+  width: 320px;
+  height: 320px;
+  top: 15%;
+  right: 12%;
+  background: rgba(0, 240, 255, 0.09);
+}
+.dogfood-orb-2 {
+  width: 260px;
+  height: 260px;
+  bottom: 25%;
+  left: 10%;
+  background: rgba(255, 42, 95, 0.07);
+  animation-duration: 24s;
+}
+
+@keyframes floatOrb {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.06); }
+  100% { transform: translateY(15px) scale(0.95); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dogfood-orb { animation: none !important; }
+}
+
+/* ==========================================================================
+   APPLICATION SHELL LAYOUT
+   ========================================================================== */
+.df-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* --- SIDEBAR --- */
+.df-sidebar {
+  width: var(--df-sidebar-width);
+  background: rgba(8, 12, 22, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--df-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.df-sidebar-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--df-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.df-brand-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.df-brand-logo {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--df-pink) 0%, #a80532 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px -2px var(--df-pink-glow);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.5px;
+}
+.df-brand-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--df-text-main);
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+.df-brand-edition {
+  color: var(--df-cyan);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.df-brand-tagline {
+  font-size: 0.68rem;
+  color: var(--df-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.df-sidebar-nav {
+  flex: 1;
+  padding: 1.25rem 0.85rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.df-nav-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--df-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  padding: 0.85rem 0.75rem 0.35rem;
+}
+
+.df-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  color: var(--df-text-secondary);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease-in-out;
+}
+.df-nav-item:hover {
+  color: var(--df-text-main);
+  background: var(--df-cyan-surface);
+  border-color: rgba(0, 240, 255, 0.15);
+  text-decoration: none;
+}
+.df-nav-item.active {
+  color: var(--df-cyan);
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.25);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--df-cyan);
+}
+.df-nav-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  color: currentColor;
+  flex-shrink: 0;
+}
+
+/* Sidebar Footer */
+.df-sidebar-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--df-border-subtle);
+  background: rgba(5, 8, 15, 0.6);
+}
+
+/* --- MAIN WRAPPER --- */
+.df-main-wrapper {
+  flex: 1;
+  margin-left: var(--df-sidebar-width);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* --- TOPBAR --- */
+.df-topbar {
+  height: var(--df-topbar-height);
+  background: rgba(8, 12, 22, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--df-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.df-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.df-sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--df-border);
+  color: var(--df-text-main);
+  padding: 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.df-page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--df-text-main);
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.df-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.df-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.df-username {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--df-text-main);
+}
+
+/* Role Badges */
+.badge-role {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 0.3em 0.75em;
+  border-radius: 50rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.badge-role-organizer, .badge-role-admin {
+  background: rgba(255, 42, 95, 0.15);
+  color: var(--df-pink);
+  border: 1px solid var(--df-border-pink);
+}
+.badge-role-judge {
+  background: rgba(0, 240, 255, 0.15);
+  color: var(--df-cyan);
+  border: 1px solid var(--df-border-bright);
+}
+.badge-role-participant {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--df-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.badge-role-visitor {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--df-text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Logout Button */
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--df-border-subtle);
+  color: var(--df-text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.btn-logout:hover {
+  color: #ff4d6d;
+  border-color: rgba(255, 42, 95, 0.4);
+  background: rgba(255, 42, 95, 0.08);
+  text-decoration: none;
+}
+
+/* --- CONTENT AREA --- */
+.df-content {
+  flex: 1;
+  padding: 2.25rem 2.5rem;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ==========================================================================
+   GLASS PANELS & CARDS
+   ========================================================================== */
+.df-card {
+  background: var(--df-bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--df-border);
+  border-radius: 12px;
+  box-shadow: var(--df-shadow-card);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.df-card:hover {
+  border-color: var(--df-border-bright);
+}
+
+.df-card-glow-pink {
+  border-color: var(--df-border-pink);
+}
+.df-card-glow-pink:hover {
+  border-color: var(--df-pink);
+  box-shadow: 0 4px 24px -2px var(--df-pink-glow);
+}
+
+.df-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--df-border-subtle);
+  padding-bottom: 0.85rem;
+}
+.df-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--df-text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Stat Cards */
+.df-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+.df-stat-card {
+  background: var(--df-bg-panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--df-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.df-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--df-cyan), transparent);
+}
+.df-stat-card.stat-pink::before {
+  background: linear-gradient(90deg, var(--df-pink), transparent);
+}
+.df-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--df-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 0.4rem;
+}
+.df-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--df-text-main);
+  line-height: 1.1;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+.df-stat-subtext {
+  font-size: 0.8rem;
+  color: var(--df-text-secondary);
+  margin-top: 0.5rem;
+}
+
+/* ==========================================================================
+   BUTTONS SYSTEM
+   ========================================================================== */
+.btn-df-primary {
+  background: linear-gradient(135deg, #00f0ff 0%, #0077ff 100%);
+  color: #030816 !important;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.25rem;
+  box-shadow: 0 0 16px -2px var(--df-cyan-glow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-df-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px 0 var(--df-cyan-glow);
+  color: #030816 !important;
+  text-decoration: none;
+}
+
+.btn-df-accent {
+  background: linear-gradient(135deg, #ff2a5f 0%, #c00832 100%);
+  color: #ffffff !important;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.25rem;
+  box-shadow: 0 0 16px -2px var(--df-pink-glow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-df-accent:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px 0 var(--df-pink-glow);
+  color: #ffffff !important;
+  text-decoration: none;
+}
+
+.btn-df-glass {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--df-text-main) !important;
+  font-weight: 500;
+  border: 1px solid var(--df-border-subtle);
+  border-radius: 8px;
+  padding: 0.55rem 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.btn-df-glass:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--df-border-bright);
+  color: var(--df-cyan) !important;
+  text-decoration: none;
+}
+
+.btn-df-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5 !important;
+  border-radius: 8px;
+  padding: 0.55rem 1.15rem;
+}
+.btn-df-danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+}
+
+/* ==========================================================================
+   MEDIUM-LIKE EDITORIAL PROJECT FEED
+   ========================================================================== */
+.editorial-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 960px;
+}
+
+.editorial-card {
+  background: var(--df-bg-panel);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--df-border-subtle);
+  border-radius: 12px;
+  padding: 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.editorial-card:hover {
+  border-color: var(--df-border-bright);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  transform: translateY(-2px);
+}
+
+.editorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.editorial-title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--df-text-main);
+  text-decoration: none;
+  margin: 0;
+  transition: color 0.15s ease;
+}
+.editorial-title:hover {
+  color: var(--df-cyan);
+  text-decoration: none;
+}
+
+.editorial-summary {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--df-text-secondary);
+  margin: 0;
+}
+
+.editorial-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--df-text-muted);
+}
+.meta-pill .icon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  color: var(--df-cyan);
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 50rem;
+}
+.status-submitted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.status-draft {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* ==========================================================================
+   FORMS & CONTROLS
+   ========================================================================== */
+.df-form-group {
+  margin-bottom: 1.5rem;
+}
+.df-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--df-text-secondary);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.2px;
+}
+
+.df-input, .df-select, .df-textarea {
+  width: 100%;
+  background: var(--df-bg-input);
+  border: 1px solid var(--df-border-subtle);
+  border-radius: 8px;
+  padding: 0.65rem 0.95rem;
+  color: var(--df-text-main);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.15s ease-in-out;
+}
+.df-input:focus, .df-select:focus, .df-textarea:focus {
+  outline: none;
+  border-color: var(--df-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.18);
+  background: rgba(13, 20, 36, 0.95);
+}
+.df-input::placeholder, .df-textarea::placeholder {
+  color: var(--df-text-dim);
+}
+
+/* ==========================================================================
+   TABLES & LISTS
+   ========================================================================== */
+.df-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--df-text-secondary);
+}
+.df-table th {
+  background: rgba(14, 22, 38, 0.85);
+  padding: 0.85rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--df-text-muted);
+  border-bottom: 1px solid var(--df-border);
+}
+.df-table td {
+  padding: 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--df-border-subtle);
+  vertical-align: middle;
+}
+.df-table tr:hover td {
+  background: rgba(0, 240, 255, 0.03);
+}
+
+/* ==========================================================================
+   ALERTS & NOTICES
+   ========================================================================== */
+.df-alert {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.df-alert-info {
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #a5f3fc;
+}
+.df-alert-success {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+.df-alert-warning {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fde68a;
+}
+.df-alert-danger {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fecaca;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (TABLET & MOBILE)
+   ========================================================================== */
+@media (max-width: 991px) {
+  .df-sidebar {
+    transform: translateX(-100%);
+  }
+  .df-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  }
+  .df-main-wrapper {
+    margin-left: 0;
+  }
+  .df-sidebar-toggle {
+    display: inline-flex;
+  }
+  .df-content {
+    padding: 1.5rem 1.25rem;
+  }
+}

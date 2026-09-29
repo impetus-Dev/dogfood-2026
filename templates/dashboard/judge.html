@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Judge Workspace — DOGFOOD 2026{% endblock %}
+{% block page_title %}Judge Workspace{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+    <div class="df-card df-card-glow-pink p-4">
+        <h2 class="h3 fw-bold mb-2">Judge Evaluation Panel</h2>
+        <p class="text-secondary mb-0">Assigned projects and scoring rubric context for {{ request.user.username }}.</p>
+    </div>
+
+    <div class="df-stat-grid mb-0">
+        <div class="df-stat-card">
+            <div class="df-stat-label">Assigned Projects</div>
+            <div class="df-stat-value" id="metric-assigned-count">{{ assigned_count }}</div>
+        </div>
+        <div class="df-stat-card stat-pink">
+            <div class="df-stat-label">Completed Evaluations</div>
+            <div class="df-stat-value text-white" id="metric-completed-count">{{ completed_count }}</div>
+        </div>
+        <div class="df-stat-card">
+            <div class="df-stat-label">Remaining Projects</div>
+            <div class="df-stat-value" id="metric-remaining-count">{{ remaining_count }}</div>
+        </div>
+    </div>
+
+    <div class="df-card" id="assigned-projects">
+        <div class="df-card-header">
+            <h3 class="df-card-title">Assigned Projects</h3>
+        </div>
+        {% if assignments %}
+        <div class="table-responsive">
+            <table class="df-table">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Team</th>
+                        <th>Track</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.project.title }}</td>
+                        <td>{{ assignment.project.team.name }}</td>
+                        <td>{{ assignment.project.track.name }}</td>
+                        <td>
+                            {% if assignment.project.id in scored_project_ids %}
+                            <span class="badge bg-success text-white">Scored</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pending Evaluation</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'projects:detail' assignment.project.pk %}" class="btn-df-glass btn-sm">View Project</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No projects currently assigned for evaluation.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -18,6 +18,9 @@ from django.views.decorators.http import require_http_methods
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     """Standard Django session login view."""
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
     if request.method == "GET":
         return render(request, "accounts/login.html")
 
@@ -27,7 +30,7 @@ def login_view(request):
 
     if user is not None:
         login(request, user)
-        return redirect("whoami")
+        return redirect("dashboard")
 
     return render(request, "accounts/login.html", {"error": "Invalid credentials."})
 

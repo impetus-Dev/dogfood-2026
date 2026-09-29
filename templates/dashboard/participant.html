@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Participant Dashboard — DOGFOOD 2026{% endblock %}
+{% block page_title %}Participant Workspace{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+    <div class="df-card df-card-glow-pink p-4">
+        <h2 class="h3 fw-bold mb-2">Hacker Workspace</h2>
+        <p class="text-secondary mb-0">Project development and submission tracking for {{ request.user.username }}.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="df-card h-100">
+                <div class="df-card-header">
+                    <h3 class="df-card-title">Team Information</h3>
+                    <a href="/teams/create/" class="btn-df-glass btn-sm">Team Options</a>
+                </div>
+                {% if team %}
+                <div class="d-flex flex-column gap-2">
+                    <div><span class="text-muted">Team Name:</span> <strong class="text-white">{{ team.name }}</strong></div>
+                    {% if membership %}
+                    <div><span class="text-muted">Your Role:</span> <span class="badge bg-secondary text-white">Member</span></div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-3">You are not currently part of any hackathon team.</p>
+                <a href="/teams/create/" class="btn-df-primary btn-sm">Create or Join a Team</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="df-card h-100">
+                <div class="df-card-header">
+                    <h3 class="df-card-title">Project Submission</h3>
+                    {% if project %}
+                    <a href="{% url 'projects:detail' project.pk %}" class="btn-df-glass btn-sm">View Project</a>
+                    {% endif %}
+                </div>
+                {% if project %}
+                <div class="d-flex flex-column gap-2">
+                    <div><span class="text-muted">Project:</span> <strong class="text-white">{{ project.title }}</strong></div>
+                    <div><span class="text-muted">Track:</span> <span class="badge bg-info text-dark">{{ project.track.name }}</span></div>
+                    <div>
+                        <span class="text-muted">Status:</span>
+                        {% if project.status == 'submitted' %}
+                        <span class="badge bg-success text-white">Submitted</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Draft</span>
+                        <a href="{% url 'projects:edit' project.pk %}" class="ms-2 btn-df-glass btn-sm">Edit Draft</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted mb-3">No project created for your team yet.</p>
+                <a href="{% url 'projects:create' %}" class="btn-df-primary btn-sm">+ Submit Project</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

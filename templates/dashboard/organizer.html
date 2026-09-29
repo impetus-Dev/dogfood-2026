@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Organizer Dashboard — DOGFOOD 2026{% endblock %}
+{% block page_title %}Control Center{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+
+    <!-- 1. HERO / EVENT HEADER -->
+    <div class="df-card df-card-glow-pink p-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-role badge-role-organizer">SYSTEM ACTIVE</span>
+                    <span class="meta-pill text-muted small">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Hackathon Control Center
+                    </span>
+                </div>
+                <h2 class="h2 fw-bold mb-2" style="letter-spacing: -0.5px; color: var(--df-text-main);">
+                    {% if active_event %}{{ active_event.name }}{% else %}DOGFOOD 2026 Hackathon{% endif %}
+                </h2>
+                <p class="mb-0 text-secondary" style="font-size: 0.95rem;">
+                    Platform operations, judging workloads, submission intake, and community verification overview.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                {% if active_event %}
+                <div class="d-inline-flex flex-column align-items-lg-end gap-1 p-3 rounded" style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--df-border-subtle);">
+                    <div class="small text-muted text-uppercase" style="letter-spacing: 0.8px; font-weight: 600;">Submissions Deadline</div>
+                    <div class="fw-semibold text-white" style="font-feature-settings: 'tnum'; font-size: 0.9rem;">
+                        {{ active_event.submissions_close|date:"M d, Y H:i e" }}
+                    </div>
+                    {% if active_event.voting_close %}
+                    <div class="small text-muted text-uppercase mt-1" style="letter-spacing: 0.8px; font-weight: 600;">Voting Closes</div>
+                    <div class="fw-semibold text-white" style="font-feature-settings: 'tnum'; font-size: 0.9rem;">
+                        {{ active_event.voting_close|date:"M d, Y H:i e" }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. OVERVIEW METRIC CARDS -->
+    <div>
+        <div class="df-stat-grid mb-0">
+            <div class="df-stat-card">
+                <div class="df-stat-label">Total Projects</div>
+                <div class="df-stat-value" id="metric-total-projects">{{ total_projects }}</div>
+                <div class="df-stat-subtext">{{ submitted_projects }} submitted, {{ draft_projects }} in draft</div>
+            </div>
+
+            <div class="df-stat-card stat-pink">
+                <div class="df-stat-label">Submitted Projects</div>
+                <div class="df-stat-value text-white" id="metric-submitted-projects">{{ submitted_projects }}</div>
+                <div class="df-stat-subtext">Verified for judging & voting</div>
+            </div>
+
+            <div class="df-stat-card">
+                <div class="df-stat-label">Active Teams</div>
+                <div class="df-stat-value" id="metric-total-teams">{{ total_teams }}</div>
+                <div class="df-stat-subtext">Registered hacker teams</div>
+            </div>
+
+            <div class="df-stat-card stat-pink">
+                <div class="df-stat-label">Assigned Judges</div>
+                <div class="df-stat-value text-white" id="metric-total-judges">{{ total_judges }}</div>
+                <div class="df-stat-subtext">Verified evaluating judges</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3 & 4. TWO-COLUMN OPERATIONAL STATUS (Judging Progress + Voting State) -->
+    <div class="row g-4">
+        <!-- Judging Progress Section -->
+        <div class="col-lg-6">
+            <div class="df-card h-100" id="judging-progress">
+                <div class="df-card-header">
+                    <h3 class="df-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--df-cyan)" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                        Judging Progress
+                    </h3>
+                    <span class="badge bg-secondary text-white">{{ judging_progress_pct }}% Complete</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mb-4">
+                    <div style="background: rgba(255, 255, 255, 0.08); height: 10px; border-radius: 5px; overflow: hidden;">
+                        <div style="width: {{ judging_progress_pct }}%; background: linear-gradient(90deg, var(--df-cyan), #0077ff); height: 100%; border-radius: 5px; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
+
+                <div class="row g-3 text-center mb-3">
+                    <div class="col-4">
+                        <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                            <div class="small text-muted mb-1">Assignments</div>
+                            <div class="h4 fw-bold mb-0" id="metric-total-assignments">{{ total_assignments }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                            <div class="small text-muted mb-1">Scores Cast</div>
+                            <div class="h4 fw-bold text-success mb-0" id="metric-total-scores">{{ total_scores }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                            <div class="small text-muted mb-1">Outstanding</div>
+                            <div class="h4 fw-bold text-warning mb-0" id="metric-outstanding">{{ outstanding_assignments }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25 mt-auto">
+                    <span class="small text-muted">Role isolation enforced on all peer scores.</span>
+                    <a href="/api/export.csv" class="btn-df-glass btn-sm">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Community Voting State Section -->
+        <div class="col-lg-6">
+            <div class="df-card h-100">
+                <div class="df-card-header">
+                    <h3 class="df-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--df-pink)" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                        Community Voting Status
+                    </h3>
+                    {% if is_voting_open %}
+                    <span class="badge bg-success text-white">VOTING OPEN</span>
+                    {% else %}
+                    <span class="badge bg-secondary text-white">VOTING CLOSED</span>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex flex-column gap-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <span class="text-secondary">Voting Mode</span>
+                        <span class="fw-semibold text-white text-capitalize">{{ active_event.voting_mode|default:"Authenticated" }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <span class="text-secondary">Total Votes Recorded</span>
+                        <span class="h5 fw-bold text-white mb-0" id="metric-total-votes">{{ total_votes }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background: rgba(0, 0, 0, 0.25);">
+                        <span class="text-secondary">Results Privacy State</span>
+                        {% if results_visible %}
+                        <span class="badge bg-info text-dark">Publicly Visible (Voting Closed)</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Hidden (Voting In Progress)</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25 mt-auto">
+                    <a href="/vote/{{ active_event_id }}/" class="btn-df-glass btn-sm">Inspect Ballot</a>
+                    <a href="/results/{{ active_event_id }}/" class="btn-df-glass btn-sm">Results View</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. RECENT PROJECTS -->
+    <div class="df-card">
+        <div class="df-card-header">
+            <h3 class="df-card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                Recent Submissions
+            </h3>
+            <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">View All in Gallery →</a>
+        </div>
+
+        {% if recent_projects %}
+        <div class="table-responsive">
+            <table class="df-table" id="recent-projects-table">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Team</th>
+                        <th>Track</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in recent_projects %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'projects:detail' project.pk %}" class="fw-semibold text-white text-decoration-none">
+                                {{ project.title }}
+                            </a>
+                        </td>
+                        <td>{{ project.team.name }}</td>
+                        <td>
+                            <span class="meta-pill small">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 16 12 12 8"></polygon></svg>
+                                {{ project.track.name }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if project.status == 'submitted' %}
+                            <span class="status-indicator status-submitted">Submitted</span>
+                            {% else %}
+                            <span class="status-indicator status-draft">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{% url 'projects:detail' project.pk %}" class="btn-df-glass btn-sm">View</a>
+                                {% if project.repo_url %}
+                                <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" class="btn-df-glass btn-sm" title="Repository">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No projects submitted yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- 6. QUICK ACTIONS -->
+    <div class="df-card">
+        <h4 class="h6 text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.8px;">Quick Operations</h4>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'projects:create' %}" class="btn-df-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + New Project
+            </a>
+            <a href="/teams/create/" class="btn-df-glass btn-sm">Manage Teams</a>
+            <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">Open Public Gallery</a>
+            <a href="/api/export/bulk/" class="btn-df-glass btn-sm">Bulk Export JSON</a>
+            <a href="/embed/gallery/{{ active_event_id }}/" target="_blank" class="btn-df-glass btn-sm">Embed Widget ↗</a>
+            <a href="/api/schema/" target="_blank" class="btn-df-glass btn-sm">OpenAPI Specification ↗</a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
