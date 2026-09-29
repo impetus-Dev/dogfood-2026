@@ -1,0 +1,638 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DOGFOOD 2026 Hackathon Platform API",
+    "version": "1.0.0",
+    "description": "Comprehensive REST API specification for the DOGFOOD 2026 Hackathon Platform, covering authentication, team formation, project submissions, judging, community voting, audit logs, and cryptographic attestations."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local / Container development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session",
+        "description": "Django session cookie authentication (e.g. Cookie: session=...)"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "detail": { "type": "string" },
+          "error": { "type": "string" },
+          "errors": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "BulkImportSummary": {
+        "type": "object",
+        "required": ["created", "updated", "skipped", "errors"],
+        "properties": {
+          "created": { "type": "integer", "example": 10 },
+          "updated": { "type": "integer", "example": 2 },
+          "skipped": { "type": "integer", "example": 0 },
+          "errors": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": []
+          }
+        }
+      },
+      "BulkExportPayload": {
+        "type": "object",
+        "properties": {
+          "event": { "type": "object" },
+          "events": { "type": "array", "items": { "type": "object" } },
+          "tracks": { "type": "array", "items": { "type": "object" } },
+          "teams": { "type": "array", "items": { "type": "object" } },
+          "projects": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "JudgeScoreItem": {
+        "type": "object",
+        "properties": {
+          "project_id": { "type": "integer" },
+          "project_title": { "type": "string" },
+          "track": { "type": "string" },
+          "criteria_scores": { "type": "object", "additionalProperties": { "type": "number" } },
+          "comment": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/accounts/login/": {
+      "post": {
+        "summary": "Authenticate user session",
+        "tags": ["Accounts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Successfully authenticated with session cookie set" },
+          "400": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/accounts/logout/": {
+      "post": {
+        "summary": "Log out current session",
+        "tags": ["Accounts"],
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "Session invalidated" }
+        }
+      }
+    },
+    "/accounts/whoami/": {
+      "get": {
+        "summary": "Get authenticated user details",
+        "tags": ["Accounts"],
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "Current user identity and role" },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/teams/create/": {
+      "post": {
+        "summary": "Create a team for the current event",
+        "tags": ["Teams"],
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": { "name": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Team created or redirected to team page" },
+          "400": { "description": "Validation error" }
+        }
+      }
+    },
+    "/teams/{id}/": {
+      "get": {
+        "summary": "Get team details",
+        "tags": ["Teams"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Team details and members" },
+          "404": { "description": "Team not found" }
+        }
+      }
+    },
+    "/teams/join/{invite_code}/": {
+      "post": {
+        "summary": "Join a team via invite code",
+        "tags": ["Teams"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          { "name": "invite_code", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Successfully joined team" },
+          "400": { "description": "Invalid invite code or already in team" }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "summary": "Public project gallery",
+        "tags": ["Projects"],
+        "responses": {
+          "200": { "description": "Gallery HTML view showing submitted projects" }
+        }
+      }
+    },
+    "/projects/new": {
+      "post": {
+        "summary": "Submit a new project",
+        "tags": ["Projects"],
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "summary"],
+                "properties": {
+                  "title": { "type": "string" },
+                  "summary": { "type": "string" },
+                  "repo_url": { "type": "string", "format": "uri" },
+                  "track_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Project created" },
+          "201": { "description": "Project created" },
+          "400": { "description": "Validation error or event submissions closed" },
+          "403": { "description": "Participant role required" }
+        }
+      }
+    },
+    "/projects/{id}/": {
+      "get": {
+        "summary": "Project detail view",
+        "tags": ["Projects"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Project details" },
+          "404": { "description": "Project not found" }
+        }
+      }
+    },
+    "/projects/{id}/edit/": {
+      "post": {
+        "summary": "Edit project draft",
+        "tags": ["Projects"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Project updated" },
+          "400": { "description": "Submissions closed or validation error" }
+        }
+      }
+    },
+    "/projects/{id}/submit/": {
+      "post": {
+        "summary": "Finalize project submission",
+        "tags": ["Projects"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Project submitted" },
+          "400": { "description": "Submissions closed or invalid draft" }
+        }
+      }
+    },
+    "/api/judge/scores/": {
+      "get": {
+        "summary": "List judge evaluations with strict role isolation",
+        "tags": ["Judging"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          {
+            "name": "judge",
+            "in": "query",
+            "required": false,
+            "description": "Target judge username or ID (peers blocked for role 'judge')",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of scored projects and rubrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/JudgeScoreItem" }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Unauthorized role or peer score access attempt" }
+        }
+      }
+    },
+    "/api/export.csv": {
+      "get": {
+        "summary": "Export project evaluations as RFC 4180 CSV",
+        "tags": ["Judging"],
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "CSV attachment with headers: project_id,project_title,track,submitted_at,review_count",
+            "content": { "text/csv": { "schema": { "type": "string" } } }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Only organizer or admin roles allowed" }
+        }
+      }
+    },
+    "/api/vote/": {
+      "post": {
+        "summary": "Cast authenticated community vote",
+        "tags": ["Voting"],
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["event_id", "project_id"],
+                "properties": {
+                  "event_id": { "type": "integer" },
+                  "project_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Vote registered" },
+          "400": { "description": "Voting closed or invalid parameters" },
+          "409": { "description": "Duplicate vote rejected" }
+        }
+      }
+    },
+    "/api/vote/link/{token}/": {
+      "post": {
+        "summary": "Cast vote using link-based token",
+        "tags": ["Voting"],
+        "parameters": [
+          { "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["event_id", "project_id"],
+                "properties": {
+                  "event_id": { "type": "integer" },
+                  "project_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Vote registered" },
+          "400": { "description": "Voting closed or invalid parameters" },
+          "409": { "description": "Token already used or duplicate vote" }
+        }
+      }
+    },
+    "/api/vote/ballot/{event_id}/": {
+      "get": {
+        "summary": "Retrieve deterministically ordered ballot for voter",
+        "tags": ["Voting"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          { "name": "event_id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "token", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of projects deterministically randomized for this identity" }
+        }
+      }
+    },
+    "/api/results/{event_id}/": {
+      "get": {
+        "summary": "Retrieve vote tally results (hidden during active voting window)",
+        "tags": ["Voting"],
+        "parameters": [
+          { "name": "event_id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Vote tallies per project" },
+          "400": { "description": "Voting still active; results hidden" }
+        }
+      }
+    },
+    "/api/projects/{project_id}/comments/": {
+      "get": {
+        "summary": "List project comments",
+        "tags": ["Voting"],
+        "parameters": [
+          { "name": "project_id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "List of comments" }
+        }
+      },
+      "post": {
+        "summary": "Post comment on project",
+        "tags": ["Voting"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["author_name", "text"],
+                "properties": {
+                  "author_name": { "type": "string" },
+                  "text": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Comment posted" },
+          "400": { "description": "Invalid comment text or author" }
+        }
+      }
+    },
+    "/api/audit/": {
+      "get": {
+        "summary": "Retrieve immutable audit log events",
+        "tags": ["Audit"],
+        "security": [{ "sessionAuth": [] }],
+        "responses": {
+          "200": { "description": "List of audit log events" },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Organizer or admin role required" }
+        }
+      }
+    },
+    "/api/t4/keys/public/": {
+      "get": {
+        "summary": "Retrieve active Ed25519 public key",
+        "tags": ["T4 Cryptography"],
+        "responses": {
+          "200": {
+            "description": "Base64-encoded raw 32-byte Ed25519 public key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "algorithm": { "type": "string", "example": "Ed25519" },
+                    "public_key": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/t4/judge-records/": {
+      "post": {
+        "summary": "Generate signed judge participation record",
+        "tags": ["T4 Cryptography"],
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["event_id", "judge_id"],
+                "properties": {
+                  "event_id": { "type": "integer" },
+                  "judge_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Signed record created" },
+          "400": { "description": "Validation error or judge not assigned" },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Organizer or admin role required" }
+        }
+      }
+    },
+    "/api/t4/certificates/": {
+      "post": {
+        "summary": "Generate participation certificate",
+        "tags": ["T4 Cryptography"],
+        "security": [{ "sessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["event_id", "user_id", "context_type"],
+                "properties": {
+                  "event_id": { "type": "integer" },
+                  "user_id": { "type": "integer" },
+                  "context_type": { "type": "string", "enum": ["participant", "judge"] },
+                  "project_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Signed certificate created" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Organizer or admin role required" }
+        }
+      }
+    },
+    "/api/t4/certificates/{id}/": {
+      "get": {
+        "summary": "Public retrieval of certificate by ID",
+        "tags": ["T4 Cryptography"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Certificate details and signature" },
+          "404": { "description": "Certificate not found" }
+        }
+      }
+    },
+    "/api/verify/{record_id}/": {
+      "get": {
+        "summary": "Cryptographic verification of a JudgeRecord",
+        "tags": ["T4 Cryptography"],
+        "parameters": [
+          { "name": "record_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cryptographic verification outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record_id": { "type": "integer" },
+                    "valid": { "type": "boolean" },
+                    "algorithm": { "type": "string" },
+                    "public_key": { "type": "string" },
+                    "payload": { "type": "object" },
+                    "signature": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Malformed record ID (non-numeric)" },
+          "404": { "description": "Record not found" }
+        }
+      }
+    },
+    "/api/export/bulk/": {
+      "get": {
+        "summary": "Bulk JSON export of event metadata with secret scrubbing",
+        "tags": ["T4 Bulk Operations"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          { "name": "event_id", "in": "query", "required": false, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized JSON data containing events, tracks, teams, and projects",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BulkExportPayload" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Organizer or admin role required" }
+        }
+      }
+    },
+    "/api/import/bulk/": {
+      "post": {
+        "summary": "Bulk JSON import with whole-payload pre-validation, atomicity, and dry-run",
+        "tags": ["T4 Bulk Operations"],
+        "security": [{ "sessionAuth": [] }],
+        "parameters": [
+          {
+            "name": "dry_run",
+            "in": "query",
+            "required": false,
+            "description": "If true, simulates validation and returns expected changes without modifying DB",
+            "schema": { "type": "boolean", "default": false }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BulkExportPayload" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import / dry-run summary",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BulkImportSummary" }
+              }
+            }
+          },
+          "400": {
+            "description": "Pre-validation failed or relational constraint violated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BulkImportSummary" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Organizer or admin role required" }
+        }
+      }
+    },
+    "/api/schema/": {
+      "get": {
+        "summary": "OpenAPI 3.0.3 machine-readable schema definition",
+        "tags": ["Schema"],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0.3 specification document",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    }
+  }
+}

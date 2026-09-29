@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ballot: {{ event.name }} — DOGFOOD 2026{% endblock %}
+{% block page_title %}Community Voting{% endblock %}
+
+{% block extra_css %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+<style>
+.project-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.project-card:hover {
+  border-color: rgba(0, 240, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.08);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4" style="max-width: 960px; margin: 0 auto;">
+
+    <!-- Navigation Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2">
+        <div>
+            <div class="df-nav-section-title mb-1" style="font-size: 0.75rem; letter-spacing: 1px;">DOGFOOD 2026 / COMMUNITY VOTING</div>
+            <h1 class="h2 fw-bold text-white mb-0" id="ballot-title">{{ event.name }}</h1>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'results_page' event.id %}" class="btn-df-glass btn-sm" id="btn-view-results">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                View Results
+            </a>
+            <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">
+                &larr; Gallery
+            </a>
+        </div>
+    </div>
+
+    <!-- Event Status & Voter Identity -->
+    <div class="df-card shadow-sm mb-2" id="ballot-status-card">
+        <div class="df-card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="df-card-title mb-0" style="font-size: 1.05rem;">Community Ballot</h5>
+                    {% if voting_closed %}
+                    <span class="badge bg-danger" id="voting-status-badge">Voting Closed</span>
+                    {% else %}
+                    <span class="badge bg-success" id="voting-status-badge">Voting Open</span>
+                    {% endif %}
+
+                    {% if event.voting_mode == 'authenticated' %}
+                    <span class="badge bg-primary">Authenticated Mode</span>
+                    {% else %}
+                    <span class="badge bg-info text-dark">Link / Token Mode</span>
+                    {% endif %}
+                </div>
+
+                {% if event.voting_close %}
+                <div class="text-secondary small">
+                    Voting closes at: <strong class="text-white">{{ event.voting_close|date:"Y-m-d H:i:s" }} UTC</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if voting_closed %}
+            <div class="alert alert-warning mb-0" role="alert" id="voting-closed-alert">
+                Voting has closed for this event. Ballots can no longer be submitted.
+            </div>
+            {% elif event.voting_mode == 'authenticated' %}
+                {% if user.is_authenticated %}
+                <div class="alert alert-info py-2 mb-0 small" role="alert" id="auth-status-alert">
+                    Signed in as <strong>{{ user.username }}</strong>. Select your project below to cast your vote.
+                </div>
+                {% else %}
+                <div class="alert alert-warning py-2 mb-0 small d-flex justify-content-between align-items-center" role="alert" id="login-required-alert">
+                    <span>You must be logged in to cast an authenticated vote.</span>
+                    <a href="{% url 'login' %}?next={{ request.path }}" class="btn-df-accent btn-sm">Log In</a>
+                </div>
+                {% endif %}
+            {% elif event.voting_mode == 'link' %}
+                {% if token_error %}
+                <div class="alert alert-danger py-2 mb-0 small" role="alert" id="token-error-alert">
+                    {{ token_error }}
+                </div>
+                {% elif token_used %}
+                <div class="alert alert-warning py-2 mb-0 small" role="alert" id="token-used-alert">
+                    This voting token has already been used. Duplicate votes are blocked.
+                </div>
+                {% else %}
+                <div class="alert alert-success py-2 mb-0 small" role="alert" id="token-valid-alert">
+                    Active voting link verified. Select a project below to cast your confidential vote.
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Dynamic JS Messages / Notification Box -->
+    <div id="js-alert-container"></div>
+
+    <!-- Server-side Django Messages -->
+    {% if messages %}
+    <div class="mb-2">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Ballot Projects List (Seed-Ordered from Backend) -->
+    <div>
+        <h4 class="h5 mb-3 text-white">Ballot Projects (Deterministic Order)</h4>
+
+        {% if not token_error and projects %}
+        <div class="row g-3" id="ballot-project-list">
+            {% for p in projects %}
+            <div class="col-12">
+                <div class="df-card h-100 project-card p-4" id="project-card-{{ p.id }}">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                        <div>
+                            <h5 class="card-title mb-1">
+                                <a href="{% url 'projects:detail' p.id %}" class="text-white text-decoration-none fw-bold" target="_blank" rel="noopener">
+                                    {{ p.title }}
+                                </a>
+                            </h5>
+                            <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                                {% if p.track %}
+                                <span class="badge bg-secondary">{{ p.track.name|default:p.track }}</span>
+                                {% endif %}
+                                {% if p.team %}
+                                <span class="meta-pill small">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                                    {{ p.team.name }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="vote-action-container" id="vote-action-{{ p.id }}">
+                            {% if p.id in voted_project_ids %}
+                            <button class="btn btn-outline-success btn-sm" disabled id="voted-btn-{{ p.id }}">Voted &check;</button>
+                            {% elif voting_closed %}
+                            <button class="btn btn-outline-secondary btn-sm" disabled>Closed</button>
+                            {% elif event.voting_mode == 'authenticated' and not user.is_authenticated %}
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn-df-accent btn-sm">Log in to Vote</a>
+                            {% elif event.voting_mode == 'link' and not token_obj %}
+                            <button class="btn btn-outline-secondary btn-sm" disabled>Token Required</button>
+                            {% elif token_used %}
+                            <button class="btn btn-outline-secondary btn-sm" disabled>Token Used</button>
+                            {% else %}
+                            <form method="post" action="" class="vote-form" data-project-id="{{ p.id }}" data-event-id="{{ event.id }}">
+                                {% csrf_token %}
+                                <input type="hidden" name="project" value="{{ p.id }}">
+                                {% if token_str %}
+                                <input type="hidden" name="token" value="{{ token_str }}">
+                                {% endif %}
+                                <button type="submit" class="btn-df-primary btn-sm btn-vote" id="vote-btn-{{ p.id }}">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Vote for Project
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="card-text text-secondary mb-3" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;">{{ p.summary }}</p>
+                    <div class="pt-2 border-top" style="border-color: var(--df-border-subtle) !important;">
+                        <a href="{% url 'projects:detail' p.id %}" class="small text-decoration-none" style="color: var(--df-cyan);" target="_blank" rel="noopener">
+                            View Project Details &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif token_error %}
+        <div class="df-card p-4 text-center text-muted">
+            <p class="mb-0">{{ token_error }}</p>
+        </div>
+        {% else %}
+        <div class="df-card p-4 text-center text-muted">
+            <p class="mb-0">No submitted projects are eligible for voting in this event yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Client-side Voting Handler (Vanilla JS with Fetch API) -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        || document.querySelector('input[name="csrfmiddlewaretoken"]')?.value
+        || '{{ csrf_token }}';
+    const votingMode = "{{ event.voting_mode }}";
+    const tokenStr = "{{ token_str|default:'' }}";
+    const alertContainer = document.getElementById("js-alert-container");
+
+    function showAlert(type, text) {
+        if (!alertContainer) return;
+        alertContainer.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                <span>${text}</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.querySelectorAll(".vote-form").forEach(function(form) {
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            const projectId = form.getAttribute("data-project-id");
+            const eventId = form.getAttribute("data-event-id");
+            const btn = form.querySelector(".btn-vote");
+            if (btn) btn.disabled = true;
+
+            let endpoint = "";
+            let body = { event: parseInt(eventId, 10), project: parseInt(projectId, 10) };
+            let headers = {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            };
+
+            if (votingMode === "link") {
+                endpoint = `/api/vote/link/${encodeURIComponent(tokenStr)}/`;
+            } else {
+                endpoint = `/api/vote/`;
+            }
+
+            fetch(endpoint, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify(body)
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { status: response.status, data: data };
+                });
+            })
+            .then(function(res) {
+                if (res.status === 201) {
+                    showAlert("success", "Your vote has been successfully cast and recorded!");
+                    const actionContainer = document.getElementById(`vote-action-${projectId}`);
+                    if (actionContainer) {
+                        actionContainer.innerHTML = `<button class="btn btn-outline-success btn-sm" disabled id="voted-btn-${projectId}">Voted &check;</button>`;
+                    }
+                } else if (res.status === 409) {
+                    const msg = res.data.detail || "You have already voted or this token has been used.";
+                    showAlert("warning", msg);
+                    if (btn) btn.disabled = true;
+                } else if (res.status === 429) {
+                    showAlert("danger", "Rate limit exceeded. Please wait a moment and try again.");
+                    if (btn) btn.disabled = false;
+                } else if (res.status === 403 || res.status === 400) {
+                    const msg = res.data.detail || JSON.stringify(res.data);
+                    showAlert("danger", msg);
+                    if (btn) btn.disabled = false;
+                } else {
+                    showAlert("danger", "An unexpected error occurred. Please try again.");
+                    if (btn) btn.disabled = false;
+                }
+            })
+            .catch(function(err) {
+                showAlert("danger", "Network error. Please try submitting again.");
+                if (btn) btn.disabled = false;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

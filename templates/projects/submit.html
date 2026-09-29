@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Submit {{ project.title }} — DOGFOOD 2026{% endblock %}
+{% block page_title %}Submit Project{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+    <div class="df-card df-card-glow-pink p-4 p-md-5" style="max-width: 680px; width: 100%;">
+        <div class="df-card-header mb-4">
+            <div>
+                <span class="badge-role badge-role-participant mb-2">SUBMISSION CONFIRMATION</span>
+                <h2 class="h3 fw-bold text-white mb-1" style="letter-spacing: -0.5px;">Submit Project</h2>
+                <p class="text-secondary small mb-0">Confirm final submission of your hackathon project.</p>
+            </div>
+        </div>
+
+        <div class="d-flex flex-column gap-3 mb-4">
+            <div class="p-3 rounded" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--df-border-subtle);">
+                <div class="small text-muted mb-1">Project Name</div>
+                <div class="h5 fw-bold text-white mb-0" id="submit-project-title">{{ project.title }}</div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <div class="p-3 rounded h-100" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--df-border-subtle);">
+                        <div class="small text-muted mb-1">Current Status</div>
+                        <span class="status-indicator status-draft">Draft</span>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="p-3 rounded h-100" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--df-border-subtle);">
+                        <div class="small text-muted mb-1">Team</div>
+                        <div class="fw-semibold text-white">{{ team.name }}</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if event.submissions_close %}
+            <div class="p-3 rounded" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--df-border-subtle);">
+                <div class="small text-muted mb-1">Submission Deadline</div>
+                <div class="fw-semibold text-white" id="submit-deadline">{{ event.submissions_close|date:"Y-m-d H:i:s" }} UTC</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="df-alert df-alert-info mb-4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <div class="small">
+                Submitting your project transitions it to submitted status, enabling evaluation by judges and community comments.
+            </div>
+        </div>
+
+        <form method="post" action="{% url 'projects:submit' project.id %}">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color: var(--df-border-subtle) !important;">
+                <a href="{% url 'projects:detail' project.id %}" class="btn-df-glass btn-sm">Cancel / Back</a>
+                <button type="submit" class="btn-df-accent btn-sm" id="btn-confirm-submit">Confirm Submission</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

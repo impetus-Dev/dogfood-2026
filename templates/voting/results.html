@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Results: {{ event.name }} — DOGFOOD 2026{% endblock %}
+{% block page_title %}Event Results{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4" style="max-width: 960px; margin: 0 auto;">
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2">
+        <div>
+            <div class="df-nav-section-title mb-1" style="font-size: 0.75rem; letter-spacing: 1px;">DOGFOOD 2026 / EVENT RESULTS</div>
+            <h1 class="h2 fw-bold text-white mb-0" id="results-event-title">{{ event.name }}</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {% if voting_closed %}
+            <span class="badge bg-success py-2 px-3" id="badge-voting-closed">Voting Closed &bull; Final Results</span>
+            {% else %}
+            <span class="badge bg-warning text-dark py-2 px-3" id="badge-voting-open">Voting Open &bull; Results Hidden</span>
+            {% endif %}
+            <a href="{% url 'ballot_page' event.id %}" class="btn-df-glass btn-sm">&larr; Back to Ballot</a>
+        </div>
+    </div>
+
+    {% if not voting_closed %}
+    <!-- PRE-CLOSE: Strictly Hidden State -->
+    <div class="df-card text-center py-5 px-4 mb-4" id="results-hidden-card">
+        <div class="mb-3">
+            <span style="font-size: 3rem;" aria-hidden="true">🔒</span>
+        </div>
+        <h3 class="h4 card-title text-white mb-2" id="results-hidden-heading">Results are Hidden</h3>
+        <p class="text-secondary mb-3" id="results-hidden-message" style="max-width: 540px; margin: 0 auto; line-height: 1.6;">
+            Results are hidden until voting closes to ensure fair and unbiased community participation.
+        </p>
+        {% if event.voting_close %}
+        <p class="small text-muted mb-4">
+            Scheduled voting close: <strong class="text-white">{{ event.voting_close|date:"Y-m-d H:i:s" }} UTC</strong>
+        </p>
+        {% endif %}
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'ballot_page' event.id %}" class="btn-df-primary" id="btn-cast-vote">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Go to Ballot to Vote
+            </a>
+            <a href="{% url 'projects:gallery' %}" class="btn-df-glass">
+                Explore Projects
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- POST-CLOSE: Real Verified Tallies -->
+    <div class="df-card mb-4" id="results-leaderboard-card">
+        <div class="df-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h3 class="df-card-title mb-0" id="leaderboard-heading">Community Voting Leaderboard</h3>
+            <span class="badge bg-primary rounded-pill px-3 py-2" id="total-votes-badge">
+                Total Votes Cast: {{ total_votes }}
+            </span>
+        </div>
+        <div class="p-0">
+            {% if results %}
+            <div class="table-responsive">
+                <table class="table df-table align-middle mb-0" id="results-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;" class="text-center">Rank</th>
+                            <th>Project</th>
+                            <th style="width: 150px;" class="text-end">Votes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in results %}
+                        <tr id="result-row-{{ item.id }}">
+                            <td class="text-center fw-bold">
+                                {% if forloop.counter == 1 %}
+                                <span class="badge bg-warning text-dark">#1 🏆</span>
+                                {% elif forloop.counter == 2 %}
+                                <span class="badge bg-secondary">#2 🥈</span>
+                                {% elif forloop.counter == 3 %}
+                                <span class="badge bg-dark text-light border border-secondary">#3 🥉</span>
+                                {% else %}
+                                <span class="text-muted">#{{ forloop.counter }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    <a href="{% url 'projects:detail' item.id %}" class="text-decoration-none fw-semibold text-white project-result-title">
+                                        {{ item.title }}
+                                    </a>
+                                    {% if item.team_name or item.track_name %}
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        {% if item.team_name %}
+                                        <span class="text-muted small">Team: <span class="text-secondary">{{ item.team_name }}</span></span>
+                                        {% endif %}
+                                        {% if item.track_name %}
+                                        <span class="badge bg-secondary small">{{ item.track_name }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <span class="badge bg-primary fs-6 px-3 project-vote-count">
+                                    {{ item.votes }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                <p class="mb-0">No submitted projects in this event.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">&larr; Return to Gallery</a>
+        <a href="{% url 'ballot_page' event.id %}" class="btn-df-primary btn-sm">View Ballot</a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

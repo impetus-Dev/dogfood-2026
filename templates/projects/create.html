@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Project Draft — DOGFOOD 2026{% endblock %}
+{% block page_title %}New Project{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+    <div class="df-card p-4 p-md-5" style="max-width: 720px; width: 100%;">
+        <div class="df-card-header mb-4">
+            <div>
+                <span class="badge-role badge-role-participant mb-2">PROJECT REGISTRATION</span>
+                <h2 class="h3 fw-bold text-white mb-1" style="letter-spacing: -0.5px;">Create Project Draft</h2>
+                <p class="text-secondary small mb-0">Initialize a project draft for your hackathon team.</p>
+            </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="df-alert df-alert-danger mb-4" role="alert">
+            <ul class="mb-0 ps-3">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                    <li><strong>{{ field }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'projects:create' %}">
+            {% csrf_token %}
+
+            <!-- GROUP 1: CLASSIFICATION -->
+            <div class="mb-4 pb-3 border-bottom" style="border-color: var(--df-border-subtle) !important;">
+                <h4 class="h6 text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.8px;">1. Team & Classification</h4>
+
+                <div class="df-form-group mb-3">
+                    <label for="id_team" class="df-label">Team <span class="text-danger">*</span></label>
+                    <select class="df-select" id="id_team" name="team" required>
+                        <option value="" disabled {% if not form.team.value %}selected{% endif %}>-- Select Your Team --</option>
+                        {% for team in form.fields.team.queryset %}
+                        <option value="{{ team.id }}" {% if form.team.value|stringformat:"s" == team.id|stringformat:"s" %}selected{% endif %}>
+                            {{ team.name }} ({{ team.event.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="df-form-group mb-0">
+                    <label for="id_track" class="df-label">Track <span class="text-danger">*</span></label>
+                    <select class="df-select" id="id_track" name="track" required>
+                        <option value="" disabled {% if not form.track.value %}selected{% endif %}>-- Select a Track --</option>
+                        {% for track in form.fields.track.queryset %}
+                        <option value="{{ track.id }}" {% if form.track.value|stringformat:"s" == track.id|stringformat:"s" %}selected{% endif %}>
+                            {{ track.name }} ({{ track.event.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- GROUP 2: PROJECT BASICS -->
+            <div class="mb-4">
+                <h4 class="h6 text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.8px;">2. Project Basics</h4>
+
+                <div class="df-form-group mb-3">
+                    <label for="id_title" class="df-label">Project Title <span class="text-danger">*</span></label>
+                    <input type="text" class="df-input" id="id_title" name="title" value="{{ form.title.value|default:'' }}" placeholder="e.g. Autonomous Analyzer" required maxlength="255">
+                </div>
+
+                <div class="df-form-group mb-3">
+                    <label for="id_summary" class="df-label">Summary / Description <span class="text-danger">*</span></label>
+                    <textarea class="df-textarea" id="id_summary" name="summary" rows="4" placeholder="Brief explanation of your project and technical architecture" required>{{ form.summary.value|default:'' }}</textarea>
+                </div>
+
+                <div class="df-form-group mb-0">
+                    <label for="id_repo_url" class="df-label">Repository URL <span class="text-danger">*</span></label>
+                    <input type="url" class="df-input" id="id_repo_url" name="repo_url" value="{{ form.repo_url.value|default:'' }}" placeholder="https://github.com/org/repo" required>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top" style="border-color: var(--df-border-subtle) !important;">
+                <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">Cancel</a>
+                <button type="submit" class="btn-df-primary btn-sm" id="btn-create-project">Save Draft</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

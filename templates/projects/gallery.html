@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Project Gallery — DOGFOOD 2026{% endblock %}
+{% block page_title %}Project Gallery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+
+    <!-- 1. GALLERY HEADER HERO -->
+    <div class="df-card df-card-glow-pink p-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-role badge-role-visitor">HACKATHON SHOWCASE</span>
+                    <span class="meta-pill text-muted small">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Community Submissions
+                    </span>
+                </div>
+                <h1 class="h2 fw-bold mb-2" style="letter-spacing: -0.5px; color: var(--df-text-main);">
+                    Project Gallery
+                </h1>
+                <p class="mb-0 text-secondary" style="font-size: 0.95rem;">
+                    Explore submitted projects from the DOGFOOD 2026 hackathon.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="{% url 'projects:create' %}" class="btn-df-primary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    + Submit Project
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SEARCH & FILTER CONTROLS -->
+    <div class="df-card p-3">
+        <form method="get" action="{% url 'projects:gallery' %}" class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="position-relative">
+                    <input type="text" class="df-input" name="q" value="{{ q }}" placeholder="Search projects by title or summary..." aria-label="Search projects">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="df-select" name="track" aria-label="Filter by track">
+                    <option value="">All Tracks</option>
+                    {% for track in tracks %}
+                    <option value="{{ track.id }}" {% if selected_track_id == track.id %}selected{% endif %}>
+                        {{ track.name }} ({{ track.event.name }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn-df-primary w-100 btn-sm">Filter</button>
+                {% if q or selected_track_id %}
+                <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- 3. EDITORIAL PROJECT FEED -->
+    <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 fw-bold text-white mb-0" style="letter-spacing: -0.3px;">Projects</h2>
+        </div>
+
+        {% if projects %}
+        <div class="editorial-feed" id="project-list">
+            {% for project in projects %}
+            <article class="editorial-card" id="project-card-{{ project.id }}">
+                <div class="editorial-header">
+                    <h3 class="h4 mb-0">
+                        <a href="{% url 'projects:detail' project.id %}" class="editorial-title project-title">
+                            {{ project.title }}
+                        </a>
+                    </h3>
+                    {% if project.status == 'submitted' %}
+                    <span class="status-indicator status-submitted project-status">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Submitted
+                    </span>
+                    {% else %}
+                    <span class="status-indicator status-draft project-status">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        Draft
+                    </span>
+                    {% endif %}
+                </div>
+
+                <p class="editorial-summary project-summary">{{ project.summary }}</p>
+
+                <div class="editorial-meta-row">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="meta-pill project-team">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                            <strong>Team:</strong> {{ project.team.name }}
+                        </span>
+                        <span class="meta-pill project-track">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            <strong>Track:</strong> {{ project.track.name }}
+                        </span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 ms-sm-auto pt-2 pt-sm-0">
+                        <a href="{% url 'projects:detail' project.id %}" class="btn-df-glass btn-sm">
+                            View Project →
+                        </a>
+                        {% if project.repo_url %}
+                        <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" class="btn-df-glass btn-sm project-repo">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            Repository ↗
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="df-card text-center py-5" id="no-projects-message">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--df-text-muted)" stroke-width="1.5" class="mb-3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <h3 class="h5 fw-bold text-white mb-2">No projects found matching your criteria.</h3>
+            <p class="text-secondary small mb-3">Try another search or browse all submissions.</p>
+            {% if q or selected_track_id %}
+            <a href="{% url 'projects:gallery' %}" class="btn-df-primary btn-sm">Browse All Projects</a>
+            {% else %}
+            <a href="{% url 'projects:create' %}" class="btn-df-primary btn-sm">+ Submit First Project</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

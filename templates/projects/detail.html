@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ project.title }} — Project Detail — DOGFOOD 2026{% endblock %}
+{% block page_title %}Project Detail{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4" style="max-width: 960px; margin: 0 auto;">
+
+    <!-- 1. PROJECT HERO / HEADER -->
+    <div class="df-card df-card-glow-pink p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-role badge-role-visitor">HACKATHON PROJECT</span>
+                    {% if project.status == 'submitted' %}
+                    <span class="status-indicator status-submitted" id="project-status">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Submitted
+                    </span>
+                    {% else %}
+                    <span class="status-indicator status-draft" id="project-status">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        Draft
+                    </span>
+                    {% endif %}
+                </div>
+                <h1 class="h2 fw-bold text-white mb-0" id="project-title" style="letter-spacing: -0.5px;">
+                    {{ project.title }}
+                </h1>
+            </div>
+
+            <!-- Action Buttons for Authorized Team Members -->
+            {% if is_member and project.status == 'draft' %}
+            <div class="d-flex gap-2">
+                {% if can_edit %}
+                <a href="{% url 'projects:edit' project.id %}" class="btn-df-glass btn-sm" id="btn-edit-project">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Edit Draft
+                </a>
+                {% endif %}
+
+                {% if can_submit %}
+                <a href="{% url 'projects:submit' project.id %}" class="btn-df-accent btn-sm" id="btn-submit-project">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Submit Project →
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Project Metadata Pills -->
+        <div class="d-flex flex-wrap align-items-center gap-3 pt-3 border-top" style="border-color: var(--df-border-subtle) !important;">
+            <span class="meta-pill">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                <strong>Team:</strong> <span id="project-team" class="text-white">{{ team.name }}</span>
+            </span>
+            <span class="meta-pill">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <strong>Track:</strong> <span id="project-track" class="text-white">{{ track.name }}</span>
+            </span>
+            <span class="meta-pill">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <strong>Event:</strong> <span id="project-event" class="text-white">{{ event.name }}</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- 2. STATUS NOTICES -->
+    {% if project.status == 'submitted' %}
+    <div class="df-alert df-alert-success">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Submitted on: <strong id="project-submitted-at">{{ project.submitted_at|date:"Y-m-d H:i:s" }} UTC</strong></span>
+    </div>
+    {% elif is_deadline_passed %}
+    <div class="df-alert df-alert-danger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>The submission deadline ({{ event.submissions_close|date:"Y-m-d H:i:s" }} UTC) has passed. This project can no longer be submitted.</span>
+    </div>
+    {% endif %}
+
+    <!-- 3. PROJECT SUMMARY & DESCRIPTION -->
+    <div class="df-card">
+        <div class="df-card-header">
+            <h3 class="df-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--df-cyan)" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+                Project Summary
+            </h3>
+        </div>
+        <p class="mb-0 text-secondary" id="project-summary" style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.7;">{{ project.summary }}</p>
+    </div>
+
+    <!-- 4. REPOSITORY SECTION (Rendered only when repo_url exists) -->
+    {% if project.repo_url %}
+    <div class="df-card">
+        <div class="df-card-header">
+            <h3 class="df-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--df-cyan)" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                Source Repository
+            </h3>
+        </div>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" class="btn-df-glass btn-sm" id="project-repo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                {{ project.repo_url }}
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 5. T3 COMMENTS SECTION (Submitted Projects Only) -->
+    {% if project.status == 'submitted' %}
+    <div class="df-card" id="project-comments-card">
+        <div class="df-card-header">
+            <h3 class="df-card-title" id="comments-heading">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--df-pink)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                Community Comments (<span id="comments-count">{{ comments|length }}</span>)
+            </h3>
+        </div>
+
+        <!-- Comments Feed -->
+        <div id="comments-list" class="d-flex flex-column gap-3 mb-4">
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="p-3 rounded comment-item" id="comment-{{ comment.id }}" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--df-border-subtle);">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="comment-author text-white" style="font-size: 0.95rem;">{{ comment.author_name }}</strong>
+                        <small class="text-muted">{{ comment.created_at|date:"Y-m-d H:i" }} UTC</small>
+                    </div>
+                    <p class="comment-text mb-0 text-secondary small" style="white-space: pre-wrap; line-height: 1.6;">{{ comment.text }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted mb-0 py-3 text-center" id="no-comments-msg">No comments yet. Be the first to share feedback!</p>
+            {% endif %}
+        </div>
+
+        <!-- Comment Input Form -->
+        <div class="pt-3 border-top" style="border-color: var(--df-border-subtle) !important;">
+            <h4 class="h6 text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.8px;">Leave a Comment</h4>
+            <div id="comment-alert-box"></div>
+            <form id="comment-form">
+                {% csrf_token %}
+                <div class="df-form-group mb-3">
+                    <label for="comment-author" class="df-label">Your Name / Display Name <span class="text-danger">*</span></label>
+                    <input type="text" class="df-input" id="comment-author" name="author_name" value="{% if user.is_authenticated %}{{ user.username }}{% endif %}" placeholder="e.g. Alex Rivera" required>
+                </div>
+                <div class="df-form-group mb-3">
+                    <label for="comment-text" class="df-label">Feedback / Comment <span class="text-danger">*</span></label>
+                    <textarea class="df-textarea" id="comment-text" name="text" rows="3" placeholder="Share your feedback or questions..." required></textarea>
+                </div>
+                <button type="submit" class="btn-df-primary btn-sm" id="btn-post-comment">Post Comment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Preserved Exact T3 AJAX Script -->
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById("comment-form");
+        if (!form) return;
+        const alertBox = document.getElementById("comment-alert-box");
+        const commentsList = document.getElementById("comments-list");
+        const countEl = document.getElementById("comments-count");
+        const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            alertBox.innerHTML = "";
+            const authorInput = document.getElementById("comment-author");
+            const textInput = document.getElementById("comment-text");
+            const authorName = authorInput.value.trim();
+            const text = textInput.value.trim();
+
+            if (!authorName || !text) {
+                alertBox.innerHTML = '<div class="df-alert df-alert-danger py-2 small">Author name and comment text cannot be blank.</div>';
+                return;
+            }
+
+            const btn = document.getElementById("btn-post-comment");
+            btn.disabled = true;
+
+            fetch("/api/projects/{{ project.id }}/comments/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken
+                },
+                body: JSON.stringify({
+                    author_name: authorName,
+                    text: text
+                })
+            })
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    return { status: res.status, data: data };
+                });
+            })
+            .then(function(result) {
+                btn.disabled = false;
+                if (result.status === 201) {
+                    const noMsg = document.getElementById("no-comments-msg");
+                    if (noMsg) noMsg.remove();
+
+                    const c = result.data;
+                    const dateStr = c.created_at ? new Date(c.created_at).toISOString().replace("T", " ").substring(0, 16) + " UTC" : "Just now";
+                    const div = document.createElement("div");
+                    div.className = "p-3 rounded comment-item";
+                    div.style = "background: rgba(0, 0, 0, 0.3); border: 1px solid var(--df-border-subtle);";
+                    div.id = "comment-" + c.id;
+                    div.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="comment-author text-white" style="font-size: 0.95rem;">${escapeHtml(c.author_name)}</strong>
+                            <small class="text-muted">${dateStr}</small>
+                        </div>
+                        <p class="comment-text mb-0 text-secondary small" style="white-space: pre-wrap; line-height: 1.6;">${escapeHtml(c.text)}</p>
+                    `;
+                    commentsList.appendChild(div);
+
+                    textInput.value = "";
+                    if (countEl) {
+                        const cur = parseInt(countEl.textContent, 10) || 0;
+                        countEl.textContent = cur + 1;
+                    }
+                    alertBox.innerHTML = '<div class="df-alert df-alert-success py-2 small">Comment posted successfully!</div>';
+                } else {
+                    const err = result.data.author_name || result.data.text || result.data.detail || "Failed to post comment.";
+                    alertBox.innerHTML = `<div class="df-alert df-alert-danger py-2 small">${escapeHtml(Array.isArray(err) ? err.join(' ') : String(err))}</div>`;
+                }
+            })
+            .catch(function(err) {
+                btn.disabled = false;
+                alertBox.innerHTML = '<div class="df-alert df-alert-danger py-2 small">Network error while posting comment.</div>';
+            });
+        });
+
+        function escapeHtml(str) {
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
+        }
+    });
+    </script>
+    {% endif %}
+
+    <!-- Back to Gallery Link -->
+    <div class="pt-2">
+        <a href="{% url 'projects:gallery' %}" class="btn-df-glass btn-sm">
+            ← Back to Project Gallery
+        </a>
+    </div>
+
+</div>
+{% endblock %}
